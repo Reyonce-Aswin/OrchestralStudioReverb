@@ -33,7 +33,7 @@ if(OSR_BUILD_VST3)
         include(FetchContent)
         FetchContent_Declare(JUCE
             GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
-            GIT_TAG 8.0.6
+            GIT_TAG 9.0.5
             GIT_SHALLOW TRUE
         )
         FetchContent_MakeAvailable(JUCE)
