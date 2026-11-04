@@ -1,5 +1,0 @@
-E:/OrchReverbPlugin/OrchestralStudioReverb/Builds/CMakeFiles/osr_dsp.dir
-E:/OrchReverbPlugin/OrchestralStudioReverb/Builds/CMakeFiles/osr_fdn_tests.dir
-E:/OrchReverbPlugin/OrchestralStudioReverb/Builds/CMakeFiles/test.dir
-E:/OrchReverbPlugin/OrchestralStudioReverb/Builds/CMakeFiles/edit_cache.dir
-E:/OrchReverbPlugin/OrchestralStudioReverb/Builds/CMakeFiles/rebuild_cache.dir
