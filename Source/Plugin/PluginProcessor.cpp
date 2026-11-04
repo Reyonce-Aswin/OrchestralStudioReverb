@@ -1,0 +1,103 @@
+#include "PluginProcessor.h"
+#include "PluginEditor.h"
+
+OrchestralStudioReverbAudioProcessor::OrchestralStudioReverbAudioProcessor()
+    : AudioProcessor(BusesProperties()
+          .withInput("Input", juce::AudioChannelSet::stereo(), true)
+          .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
+      parameters(*this, nullptr, "OSR_STATE", createParameterLayout())
+{
+}
+
+juce::AudioProcessorValueTreeState::ParameterLayout
+OrchestralStudioReverbAudioProcessor::createParameterLayout()
+{
+    using namespace juce;
+    AudioProcessorValueTreeState::ParameterLayout layout;
+    layout.add(std::make_unique<AudioParameterFloat>(ParameterID { "decay", 1 }, "Decay",
+        NormalisableRange<float>(0.15f, 20.0f, 0.01f, 0.35f), 2.2f, "s"));
+    layout.add(std::make_unique<AudioParameterFloat>(ParameterID { "damping", 1 }, "Damping",
+        NormalisableRange<float>(500.0f, 18000.0f, 1.0f, 0.4f), 9000.0f, "Hz"));
+    layout.add(std::make_unique<AudioParameterFloat>(ParameterID { "wet", 1 }, "Wet",
+        NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.25f));
+    return layout;
+}
+
+void OrchestralStudioReverbAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
+{
+    reverb.prepare(sampleRate, static_cast<std::size_t>(samplesPerBlock));
+    wetSmoother.reset(sampleRate, 0.03);
+    wetSmoother.setCurrentAndTargetValue(parameters.getRawParameterValue("wet")->load());
+}
+
+void OrchestralStudioReverbAudioProcessor::releaseResources()
+{
+    reverb.reset();
+}
+
+bool OrchestralStudioReverbAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
+{
+    const auto& input = layouts.getMainInputChannelSet();
+    const auto& output = layouts.getMainOutputChannelSet();
+    return input == output && (output == juce::AudioChannelSet::mono()
+                               || output == juce::AudioChannelSet::stereo());
+}
+
+void OrchestralStudioReverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
+                                                         juce::MidiBuffer&)
+{
+    juce::ScopedNoDenormals noDenormals;
+    const int channels = buffer.getNumChannels();
+    const int samples = buffer.getNumSamples();
+    if (channels == 0)
+        return;
+
+    orchestral::dsp::FDNReverb::Parameters p;
+    p.decaySeconds = parameters.getRawParameterValue("decay")->load();
+    p.dampingHz = parameters.getRawParameterValue("damping")->load();
+    p.inputGain = 0.22f;
+    p.wetGain = 1.0f;
+    reverb.setParameters(p);
+
+    const float targetWet = parameters.getRawParameterValue("wet")->load();
+    wetSmoother.setTargetValue(targetWet);
+    auto* left = buffer.getWritePointer(0);
+    auto* right = channels > 1 ? buffer.getWritePointer(1) : nullptr;
+
+    for (int i = 0; i < samples; ++i)
+    {
+        const float dryL = left[i];
+        const float dryR = right != nullptr ? right[i] : dryL;
+        float wetL = 0.0f, wetR = 0.0f;
+        reverb.processSample(dryL, dryR, wetL, wetR);
+        const float wet = wetSmoother.getNextValue();
+        const float dry = 1.0f - wet;
+        left[i] = dry * dryL + wet * wetL;
+        if (right != nullptr)
+            right[i] = dry * dryR + wet * wetR;
+    }
+}
+
+juce::AudioProcessorEditor* OrchestralStudioReverbAudioProcessor::createEditor()
+{
+    return new OrchestralStudioReverbAudioProcessorEditor(*this);
+}
+
+void OrchestralStudioReverbAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
+{
+    auto state = parameters.copyState();
+    std::unique_ptr<juce::XmlElement> xml(state.createXml());
+    copyXmlToBinary(*xml, destData);
+}
+
+void OrchestralStudioReverbAudioProcessor::setStateInformation(const void* data, int sizeInBytes)
+{
+    std::unique_ptr<juce::XmlElement> xml(getXmlFromBinary(data, sizeInBytes));
+    if (xml != nullptr && xml->hasTagName(parameters.state.getType()))
+        parameters.replaceState(juce::ValueTree::fromXml(*xml));
+}
+
+juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
+{
+    return new OrchestralStudioReverbAudioProcessor();
+}

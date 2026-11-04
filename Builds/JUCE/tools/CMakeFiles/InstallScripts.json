@@ -1,0 +1,10 @@
+{
+	"InstallScripts" : 
+	[
+		"E:/OrchReverbPlugin/OrchestralStudioReverb/Builds/JUCE/tools/cmake_install.cmake",
+		"E:/OrchReverbPlugin/OrchestralStudioReverb/Builds/JUCE/tools/modules/cmake_install.cmake",
+		"E:/OrchReverbPlugin/OrchestralStudioReverb/Builds/JUCE/tools/extras/Build/cmake_install.cmake",
+		"E:/OrchReverbPlugin/OrchestralStudioReverb/Builds/JUCE/tools/extras/Build/juceaide/cmake_install.cmake"
+	],
+	"Parallel" : false
+}
