@@ -7,3 +7,7 @@ cmake-build-*/
 *.wav
 *.dll
 *.vst3
+
+# Generated build output
+Builds/
+cmake-build-*/
