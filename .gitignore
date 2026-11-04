@@ -7,3 +7,6 @@ cmake-build-*/
 *.wav
 *.dll
 *.vst3
+
+# CMake/JUCE generated build directory
+Builds/
