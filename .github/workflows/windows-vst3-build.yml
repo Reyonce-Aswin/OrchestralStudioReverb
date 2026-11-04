@@ -13,7 +13,7 @@ permissions:
 jobs:
   build:
     name: Build plugin and run DSP tests
-    runs-on: windows-latest
+    runs-on: windows-2022
 
     steps:
       - name: Check out source
