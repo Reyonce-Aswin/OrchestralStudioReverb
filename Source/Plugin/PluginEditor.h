@@ -34,8 +34,11 @@ private:
     OrchestralStudioReverbAudioProcessor& processor;
     OSRControlLookAndFeel controlLookAndFeel;
     OrchestraLayoutComponent stageMap;
-    juce::TextButton standardLayoutButton { "STANDARD" };
-    juce::TextButton classicalLayoutButton { "CLASSICAL / EUROPEAN" };
+    juce::Label selectorTitle;
+    juce::TextButton standardLayoutButton { "FULL MODERN" };
+    juce::TextButton classicalLayoutButton { "FULL CLASSICAL" };
+    juce::TextButton chamberModernButton { "CHAMBER MODERN" };
+    juce::TextButton chamberClassicalButton { "CHAMBER CLASSICAL" };
     juce::Slider decay, damping, roomSize, preDelay, early, dry, wet;
     juce::Label title, presetLabel, decayLabel, dampingLabel, roomSizeLabel, preDelayLabel;
     juce::Label earlyLabel, dryLabel, wetLabel, stagePositionLabel;
