@@ -26,6 +26,7 @@ public:
     void paint(juce::Graphics&) override;
     void mouseDown(const juce::MouseEvent&) override;
     void mouseDrag(const juce::MouseEvent&) override;
+    void mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails&) override;
 private:
     juce::AudioProcessorValueTreeState& state() noexcept { return processor.getParameters(); }
     float frequencyToX(float frequency) const;
@@ -66,13 +67,15 @@ private:
     juce::TextButton eqBandButtons[8];
     juce::TextButton eqEnableButton { "BAND ON" };
     juce::ComboBox eqTypeBox, eqSlopeBox;
-    juce::Slider eqFrequency, eqGain, eqQ;
-    juce::Label eqFrequencyLabel, eqGainLabel, eqQLabel, eqTypeLabel, eqSlopeLabel;
+    juce::Slider eqFrequency, eqGain, eqQ, eqMix;
+    juce::Label eqFrequencyLabel, eqGainLabel, eqQLabel, eqMixLabel;
+    juce::Label eqFrequencyValue, eqGainValue, eqQValue, eqMixValue;
+    juce::Label eqTypeLabel, eqSlopeLabel;
     using ButtonAttachment = juce::AudioProcessorValueTreeState::ButtonAttachment;
     using ComboAttachment = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
     std::unique_ptr<ButtonAttachment> eqBypassAttachment, eqEnableAttachment;
     std::unique_ptr<ComboAttachment> eqTypeAttachment, eqSlopeAttachment;
-    std::unique_ptr<Attachment> eqFrequencyAttachment, eqGainAttachment, eqQAttachment;
+    std::unique_ptr<Attachment> eqFrequencyAttachment, eqGainAttachment, eqQAttachment, eqMixAttachment;
     int selectedEQBand = 0;
     bool showingEQ = false;
     juce::String lastDisplayedStageSelection;
