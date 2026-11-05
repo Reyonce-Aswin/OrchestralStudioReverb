@@ -34,30 +34,35 @@ OrchestralStudioReverbAudioProcessorEditor::OrchestralStudioReverbAudioProcessor
     addAndMakeVisible(stageMap);
 
     const auto setupSlider = [this](juce::Slider& slider, juce::Label& label,
-                                    const juce::String& name)
+                                    juce::Label& valueLabel, const juce::String& name)
     {
         slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-        slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 68, 18);
+        slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
         slider.setColour(juce::Slider::rotarySliderFillColourId, accent);
         slider.setColour(juce::Slider::rotarySliderOutlineColourId, border);
         slider.setColour(juce::Slider::thumbColourId, text);
-        slider.setColour(juce::Slider::textBoxTextColourId, muted);
-        slider.setColour(juce::Slider::textBoxBackgroundColourId, background);
+
         label.setText(name, juce::dontSendNotification);
         label.setJustificationType(juce::Justification::centred);
         label.setColour(juce::Label::textColourId, text);
         label.setFont(juce::Font(juce::FontOptions(10.0f)));
+
+        valueLabel.setJustificationType(juce::Justification::centred);
+        valueLabel.setColour(juce::Label::textColourId, muted);
+        valueLabel.setFont(juce::Font(juce::FontOptions(12.0f)));
+
         addAndMakeVisible(slider);
         addAndMakeVisible(label);
+        addAndMakeVisible(valueLabel);
     };
 
-    setupSlider(roomSize, roomSizeLabel, "ROOM SIZE");
-    setupSlider(preDelay, preDelayLabel, "PRE-DELAY");
-    setupSlider(decay, decayLabel, "DECAY");
-    setupSlider(damping, dampingLabel, "DAMPING");
-    setupSlider(early, earlyLabel, "EARLY LEVEL");
-    setupSlider(dry, dryLabel, "DRY");
-    setupSlider(wet, wetLabel, "LATE WET");
+    setupSlider(roomSize, roomSizeLabel, roomSizeValue, "ROOM SIZE");
+    setupSlider(preDelay, preDelayLabel, preDelayValue, "PRE-DELAY");
+    setupSlider(decay, decayLabel, decayValue, "DECAY");
+    setupSlider(damping, dampingLabel, dampingValue, "DAMPING");
+    setupSlider(early, earlyLabel, earlyValue, "EARLY LEVEL");
+    setupSlider(dry, dryLabel, dryValue, "DRY");
+    setupSlider(wet, wetLabel, wetValue, "LATE WET");
 
     auto& state = processor.getParameters();
     decayAttachment = std::make_unique<Attachment>(state, "decay", decay);
@@ -67,6 +72,16 @@ OrchestralStudioReverbAudioProcessorEditor::OrchestralStudioReverbAudioProcessor
     earlyAttachment = std::make_unique<Attachment>(state, "early", early);
     dryAttachment = std::make_unique<Attachment>(state, "dry", dry);
     wetAttachment = std::make_unique<Attachment>(state, "wet", wet);
+
+    const auto refreshValues = [this] { updateValueLabels(); };
+    roomSize.onValueChange = refreshValues;
+    preDelay.onValueChange = refreshValues;
+    decay.onValueChange = refreshValues;
+    damping.onValueChange = refreshValues;
+    early.onValueChange = refreshValues;
+    dry.onValueChange = refreshValues;
+    wet.onValueChange = refreshValues;
+    updateValueLabels();
 
     stageMap.onSelectionChanged = [this](const juce::String& sectionName)
     {
@@ -87,6 +102,28 @@ OrchestralStudioReverbAudioProcessorEditor::OrchestralStudioReverbAudioProcessor
     setResizable(true, true);
     setResizeLimits(850, 620, 1400, 1000);
     setSize(1000, 700);
+}
+
+void OrchestralStudioReverbAudioProcessorEditor::updateValueLabels()
+{
+    roomSizeValue.setText(juce::String(roomSize.getValue(), 2) + "×",
+                          juce::dontSendNotification);
+    preDelayValue.setText(juce::String(preDelay.getValue(), 1) + " ms",
+                          juce::dontSendNotification);
+    decayValue.setText(juce::String(decay.getValue(), 2) + " s",
+                       juce::dontSendNotification);
+
+    const double dampingHz = damping.getValue();
+    dampingValue.setText(dampingHz >= 1000.0
+        ? juce::String(dampingHz / 1000.0, 2) + " kHz"
+        : juce::String(dampingHz, 0) + " Hz", juce::dontSendNotification);
+
+    earlyValue.setText(juce::String(early.getValue() * 100.0, 1) + "%",
+                       juce::dontSendNotification);
+    dryValue.setText(juce::String(dry.getValue() * 100.0, 1) + "%",
+                     juce::dontSendNotification);
+    wetValue.setText(juce::String(wet.getValue() * 100.0, 1) + "%",
+                     juce::dontSendNotification);
 }
 
 void OrchestralStudioReverbAudioProcessorEditor::paint(juce::Graphics& g)
@@ -123,13 +160,17 @@ void OrchestralStudioReverbAudioProcessorEditor::resized()
     juce::Slider* sliders[] = { &roomSize, &preDelay, &decay, &damping, &early, &dry, &wet };
     juce::Label* labels[] = { &roomSizeLabel, &preDelayLabel, &decayLabel, &dampingLabel,
                               &earlyLabel, &dryLabel, &wetLabel };
+    juce::Label* values[] = { &roomSizeValue, &preDelayValue, &decayValue, &dampingValue,
+                              &earlyValue, &dryValue, &wetValue };
+
     for (int i = 0; i < count; ++i)
     {
         const int x = margin + i * cellWidth;
-        labels[i]->setBounds(x, controlsTop + 1, cellWidth, 16);
+        labels[i]->setBounds(x, controlsTop + 3, cellWidth, 15);
         const int dialWidth = juce::jmin(88, cellWidth - 8);
         sliders[i]->setBounds(x + (cellWidth - dialWidth) / 2,
-                              controlsTop + 17, dialWidth, 142);
+                              controlsTop + 19, dialWidth, 88);
+        values[i]->setBounds(x, controlsTop + 107, cellWidth, 20);
     }
 }
 
