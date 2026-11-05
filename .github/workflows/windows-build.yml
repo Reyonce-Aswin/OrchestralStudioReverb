@@ -2,7 +2,7 @@ name: Windows build and DSP tests
 
 on:
   push:
-    branches: [main, master, 'fix/**', 'preview/**', 'vst/**']
+    branches: [main, master, 'fix/**', 'preview/full-plugin-1000x700', 'vst/**']
   pull_request:
     branches: [main, master]
   workflow_dispatch:
