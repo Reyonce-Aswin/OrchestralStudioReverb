@@ -1,6 +1,7 @@
 #pragma once
 #include <juce_audio_utils/juce_audio_utils.h>
 #include "FDNReverb.h"
+#include "EarlyReflections.h"
 
 class OrchestralStudioReverbAudioProcessor final : public juce::AudioProcessor
 {
@@ -33,8 +34,10 @@ public:
 
 private:
     orchestral::dsp::FDNReverb reverb;
+    orchestral::dsp::EarlyReflections earlyReflections;
     juce::AudioProcessorValueTreeState parameters;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> drySmoother;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> wetSmoother;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> earlySmoother;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OrchestralStudioReverbAudioProcessor)
 };
