@@ -13,8 +13,8 @@ struct Sector { const char* name; int ring; float from,to; const char* label; };
 struct StandardSector { const char* name; float inner, outer, from, to; bool gapStart, gapEnd; const char* label; };
 const std::array<StandardSector,19> standard {{
  {"Piano",62,100,180,0,false,false,"PIANO"},
- {"Violin I",108,253,180,142,false,true,"VIOLIN I"},
- {"Violin II",110,192,142,90,true,false,"VIOLIN II"},
+ {"Violins I",108,253,180,142,false,true,"VIOLINS I"},
+ {"Violins II",110,192,142,90,true,false,"VIOLINS II"},
  {"Violas",110,192,90,40,false,true,"VIOLAS"},
  {"Celli",108,217,40,0,true,false,"CELLI"},
  {"Basses",228,313,40,0,true,false,"BASSES"},
@@ -33,15 +33,15 @@ const std::array<StandardSector,19> standard {{
  {"Tuba",326,388,12,0,false,false,"TUBA"}
 }};
 const std::array<Sector,18> antiphonal {{
- {"Piano",0,180,0,"PIANO"},{"Violins I",1,180,140,"VIOLIN I"},
+ {"Piano",0,180,0,"PIANO"},{"Violins I",1,180,140,"VIOLINS I"},
  {"Celli",1,140,90,"CELLI"},{"Violas",1,90,40,"VIOLAS"},
- {"Violins II",1,40,0,"VIOLIN II"},{"Basses",2,150,118,"BASSES"},
+ {"Violins II",1,40,0,"VIOLINS II"},{"Basses",2,150,118,"BASSES"},
  {"Piccolos / Flutes",2,118,94,"PICCOLOS /\nFLUTES"},{"Oboes",2,94,70,"OBOES"},
  {"Clarinets",2,70,46,"CLARINETS"},{"Bassoons",2,46,22,"BASSOONS"},
  {"Harp / Celeste",3,180,152,"HARP /\nCELESTE"},{"Horns",3,148,120,"HORNS"},
  {"Trumpets",3,120,98,"TRUMPETS"},{"Tenor Trombones",3,98,78,"TENOR\nTROMBONES"},
  {"Bass Trombones",3,78,60,"BASS\nTROMBONES"},{"Tuba",3,60,44,"TUBA"},
- {"Percussion",4,125,68,"TIMPANI /\nUNTUNED PERC"},{"Tuned Percussion",4,68,38,"TUBULAR BELLS /\nMALLETS"}
+ {"Percussion",4,125,68,"PERCUSSION"},{"Tuned Percussion",4,68,38,"TUNED PERCUSSION"}
 }};
 const std::array<float,5> inner {{62,108,213,273,333}}, outer {{100,205,265,325,385}};
 }
@@ -64,8 +64,8 @@ public:
   drawText(g,"ORCHESTRA LAYOUT",28,70,210,20,10,ink);
   rounded(g,{27,98,232,42},line,bg);
   rounded(g,{layout==0?29.0f:144.0f,100,113,38},blue,selected);
-  drawText(g,"STANDARD",29,100,113,38,10,ink);
-  drawText(g,"CLASSICAL / EUROPEAN\n(ANTIPHONAL)",144,100,113,38,9,ink);
+  drawText(g,"STANDARD",29,100,113,38,10,ink,juce::Justification::centred);
+  drawText(g,"CLASSICAL / EUROPEAN\n(ANTIPHONAL)",144,100,113,38,9,ink,juce::Justification::centred);
   g.setColour(line); g.drawLine(28,154,258,154);
   drawText(g,"ROOM",29,164,200,18,10,ink);
   knob(g,90,222,"ROOM SIZE","1.20 ×"); knob(g,203,222,"PRE-DELAY","54 ms");
@@ -99,7 +99,7 @@ public:
  void mouseDown(const juce::MouseEvent& e) override
  {
   auto p=e.position;
-  if(p.y>=98&&p.y<=140&&p.x>=27&&p.x<=259){layout=p.x<143?0:1; selectedName=layout==0?"Violas":"Violins II"; repaint(); return;}
+  if(p.y>=98&&p.y<=140&&p.x>=27&&p.x<=259){layout=p.x<143?0:1; selectedName=layout==0?"Violas":"Violins II"; hoveredName.clear(); repaint(); return;}
   if(p.y>=10&&p.y<=44&&p.x>=450&&p.x<=730){preset=(preset+1)%presets.size(); repaint(); return;}
   auto r=stageRect(); auto centre=juce::Point<float>(r.getCentreX(),r.getBottom()-1);
   if(!r.contains(p))return;
@@ -152,7 +152,7 @@ private:
   auto edgeAngle=[&](float base,float radius,bool startEdge,bool gap)
   {
    if(!gap)return juce::degreesToRadians(base);
-   const float delta=std::asin(juce::jlimit(0.0f,0.99f,5.0f/juce::jmax(1.0f,radius)));
+   const float inset=5.0f*1.6f*scale;\n   const float delta=std::asin(juce::jlimit(0.0f,0.99f,inset/juce::jmax(1.0f,radius)));
    return juce::degreesToRadians(base)+(startEdge?-delta:delta);
   };
   juce::Path p;
