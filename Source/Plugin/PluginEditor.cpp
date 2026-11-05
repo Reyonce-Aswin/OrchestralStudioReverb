@@ -1,6 +1,7 @@
 #include "PluginEditor.h"
 #include <cmath>
 #include <utility>
+#include <limits>
 
 namespace
 {
@@ -304,7 +305,8 @@ OrchestralStudioReverbAudioProcessorEditor::OrchestralStudioReverbAudioProcessor
     updateLayoutButtons();
     startTimerHz(20);
     setResizable(true, true);
-    setResizeLimits(850, 620, 1400, 1000);
+    setResizeLimits(850, 620, (std::numeric_limits<int>::max)(),
+                    (std::numeric_limits<int>::max)());
     setSize(1000, 700);
 }
 
