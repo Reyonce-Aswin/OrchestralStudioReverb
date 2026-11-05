@@ -18,15 +18,20 @@ OrchestralStudioReverbAudioProcessor::createParameterLayout()
         NormalisableRange<float>(0.15f, 20.0f, 0.01f, 0.35f), 2.2f, "s"));
     layout.add(std::make_unique<AudioParameterFloat>(ParameterID { "damping", 1 }, "Damping",
         NormalisableRange<float>(500.0f, 18000.0f, 1.0f, 0.4f), 9000.0f, "Hz"));
+    // Parallel return architecture: neither fader changes the other.
+    layout.add(std::make_unique<AudioParameterFloat>(ParameterID { "dry", 1 }, "Dry",
+        NormalisableRange<float>(0.0f, 1.0f, 0.001f), 1.0f));
     layout.add(std::make_unique<AudioParameterFloat>(ParameterID { "wet", 1 }, "Wet",
-        NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.25f));
+        NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.35f));
     return layout;
 }
 
 void OrchestralStudioReverbAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     reverb.prepare(sampleRate, static_cast<std::size_t>(samplesPerBlock));
+    drySmoother.reset(sampleRate, 0.03);
     wetSmoother.reset(sampleRate, 0.03);
+    drySmoother.setCurrentAndTargetValue(parameters.getRawParameterValue("dry")->load());
     wetSmoother.setCurrentAndTargetValue(parameters.getRawParameterValue("wet")->load());
 }
 
@@ -59,8 +64,9 @@ void OrchestralStudioReverbAudioProcessor::processBlock(juce::AudioBuffer<float>
     p.wetGain = 1.0f;
     reverb.setParameters(p);
 
-    const float targetWet = parameters.getRawParameterValue("wet")->load();
-    wetSmoother.setTargetValue(targetWet);
+    drySmoother.setTargetValue(parameters.getRawParameterValue("dry")->load());
+    wetSmoother.setTargetValue(parameters.getRawParameterValue("wet")->load());
+
     auto* left = buffer.getWritePointer(0);
     auto* right = channels > 1 ? buffer.getWritePointer(1) : nullptr;
 
@@ -70,11 +76,12 @@ void OrchestralStudioReverbAudioProcessor::processBlock(juce::AudioBuffer<float>
         const float dryR = right != nullptr ? right[i] : dryL;
         float wetL = 0.0f, wetR = 0.0f;
         reverb.processSample(dryL, dryR, wetL, wetR);
-        const float wet = wetSmoother.getNextValue();
-        const float dry = 1.0f - wet;
-        left[i] = dry * dryL + wet * wetL;
+
+        const float dryGain = drySmoother.getNextValue();
+        const float wetGain = wetSmoother.getNextValue();
+        left[i] = dryGain * dryL + wetGain * wetL;
         if (right != nullptr)
-            right[i] = dry * dryR + wet * wetR;
+            right[i] = dryGain * dryR + wetGain * wetR;
     }
 }
 
