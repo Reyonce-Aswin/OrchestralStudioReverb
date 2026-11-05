@@ -83,6 +83,7 @@ if(OSR_BUILD_VST3)
     else()
         message(STATUS "JUCE not found: building standalone DSP library/tests only. Set JUCE_DIR or enable OSR_FETCH_JUCE.")
     endif()
+    if(TARGET juce::juce_gui_extra)
     # Build the orchestra selector in isolation before integrating it into the plugin.
     juce_add_gui_app(OrchestraLayoutPreview
         PRODUCT_NAME "Orchestra Layout Preview"
@@ -100,5 +101,6 @@ if(OSR_BUILD_VST3)
         juce::juce_recommended_config_flags
         juce::juce_recommended_warning_flags
     )
+    endif()
 
 endif()
