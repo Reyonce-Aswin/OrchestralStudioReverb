@@ -114,15 +114,76 @@ private:
         {{ 0.50979558f, 0.60134489f, 0.89997622f, 2.5629154f }}
     }};
 
-    static Coeff makeCoefficients(Type type, float frequency, float gainDb, float q) noexcept
+    Coeff makeCoefficients(Type type, float frequency, float gainDb, float q) const noexcept
     {
         constexpr float pi = 3.14159265358979323846f;
-        const float w0 = 2.0f * pi * frequency / static_cast<float>(sampleRateForCoefficient);
-        juceUnused(w0);
-        return {};
-    }
+        const float w0 = 2.0f * pi * frequency / static_cast<float>(sampleRate);
+        const float cosine = std::cos(w0);
+        const float sine = std::sin(w0);
+        const float alpha = sine / (2.0f * std::max(0.1f, q));
+        const float amplitude = std::pow(10.0f, std::clamp(gainDb, -24.0f, 24.0f) / 40.0f);
+        float b0 = 1.0f, b1 = 0.0f, b2 = 0.0f;
+        float a0 = 1.0f, a1 = 0.0f, a2 = 0.0f;
 
-    static void juceUnused(float) noexcept {}
+        switch (type)
+        {
+            case Type::LowCut:
+                b0 = (1.0f + cosine) * 0.5f;
+                b1 = -(1.0f + cosine);
+                b2 = (1.0f + cosine) * 0.5f;
+                a0 = 1.0f + alpha;
+                a1 = -2.0f * cosine;
+                a2 = 1.0f - alpha;
+                break;
+            case Type::HighCut:
+                b0 = (1.0f - cosine) * 0.5f;
+                b1 = 1.0f - cosine;
+                b2 = (1.0f - cosine) * 0.5f;
+                a0 = 1.0f + alpha;
+                a1 = -2.0f * cosine;
+                a2 = 1.0f - alpha;
+                break;
+            case Type::Bell:
+            {
+                b0 = 1.0f + alpha * amplitude;
+                b1 = -2.0f * cosine;
+                b2 = 1.0f - alpha * amplitude;
+                a0 = 1.0f + alpha / amplitude;
+                a1 = -2.0f * cosine;
+                a2 = 1.0f - alpha / amplitude;
+                break;
+            }
+            case Type::LowShelf:
+            case Type::HighShelf:
+            {
+                const float shelfAlpha = (sine * 0.5f) * std::sqrt(2.0f);
+                const float root = 2.0f * std::sqrt(amplitude) * shelfAlpha;
+                if (type == Type::LowShelf)
+                {
+                    b0 = amplitude * ((amplitude + 1.0f) - (amplitude - 1.0f) * cosine + root);
+                    b1 = 2.0f * amplitude * ((amplitude - 1.0f) - (amplitude + 1.0f) * cosine);
+                    b2 = amplitude * ((amplitude + 1.0f) - (amplitude - 1.0f) * cosine - root);
+                    a0 = (amplitude + 1.0f) + (amplitude - 1.0f) * cosine + root;
+                    a1 = -2.0f * ((amplitude - 1.0f) + (amplitude + 1.0f) * cosine);
+                    a2 = (amplitude + 1.0f) + (amplitude - 1.0f) * cosine - root;
+                }
+                else
+                {
+                    b0 = amplitude * ((amplitude + 1.0f) + (amplitude - 1.0f) * cosine + root);
+                    b1 = -2.0f * amplitude * ((amplitude - 1.0f) + (amplitude + 1.0f) * cosine);
+                    b2 = amplitude * ((amplitude + 1.0f) + (amplitude - 1.0f) * cosine - root);
+                    a0 = (amplitude + 1.0f) - (amplitude - 1.0f) * cosine + root;
+                    a1 = 2.0f * ((amplitude - 1.0f) - (amplitude + 1.0f) * cosine);
+                    a2 = (amplitude + 1.0f) - (amplitude - 1.0f) * cosine - root;
+                }
+                break;
+            }
+        }
+
+        const float inverseA0 = 1.0f / a0;
+        return { b0 * inverseA0, b1 * inverseA0, b2 * inverseA0,
+                 a1 * inverseA0, a2 * inverseA0 };
+    }
 
     static float processOne(float input, Channel& channel) noexcept
     {
@@ -144,7 +205,6 @@ private:
         return std::isfinite(output) ? output : 0.0f;
     }
 
-    inline static double sampleRateForCoefficient = 48000.0;
     double sampleRate = 48000.0;
     bool prepared = false;
     std::array<BandStages, 8> filters {};
