@@ -1,4 +1,5 @@
 #include "../Source/DSP/FDNReverb.h"
+#include "../Source/DSP/StagePosition.h"
 
 #include <algorithm>
 #include <cassert>
@@ -43,6 +44,22 @@ static StereoEnergy renderAtStage(int stage)
 int main()
 {
     using orchestral::dsp::FDNReverb;
+
+    // The same instrument must occupy different acoustic positions in
+    // modern and antiphonal chamber seating.
+    const auto chamberModernViolinI = orchestral::dsp::getStagePosition(
+        orchestral::dsp::StageLayout::chamberModern, 1);
+    const auto chamberClassicalViolinI = orchestral::dsp::getStagePosition(
+        orchestral::dsp::StageLayout::chamberClassical, 1);
+    const auto chamberClassicalViolinII = orchestral::dsp::getStagePosition(
+        orchestral::dsp::StageLayout::chamberClassical, 2);
+    assert(chamberModernViolinI.pan < -0.8f);
+    assert(chamberClassicalViolinI.pan < -0.9f);
+    assert(chamberClassicalViolinII.pan > 0.9f);
+    assert(std::abs(chamberModernViolinI.pan - chamberClassicalViolinI.pan) > 0.01f);
+    const auto chamberTimpani = orchestral::dsp::getStagePosition(
+        orchestral::dsp::StageLayout::chamberModern, 13);
+    assert(chamberTimpani.depth > chamberModernViolinI.depth);
     FDNReverb reverb;
     reverb.prepare(48000.0, 512);
 
