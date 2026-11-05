@@ -198,7 +198,7 @@ void OrchestraLayoutComponent::paint(juce::Graphics& g)
         const float localWidth = juce::jmax(30.0f,
             2.0f * radius * std::sin(radians(angularWidth * 0.5f)) - 8.0f);
         const int lineCount = sector.label.contains("\n") ? 2 : 1;
-        float fontSize = currentLayout == Layout::Standard ? 12.0f : 12.0f;
+        float fontSize = 14.0f;
         auto font = makeLabelFont(fontSize, static_cast<int>(i) == selectedIndex);
         auto widthOf = [&font](const juce::String& line)
         {
