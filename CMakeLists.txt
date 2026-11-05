@@ -84,29 +84,31 @@ if(OSR_BUILD_VST3)
     else()
         message(STATUS "JUCE not found: building standalone DSP library/tests only. Set JUCE_DIR or enable OSR_FETCH_JUCE.")
     endif()
-    if(TARGET juce::juce_gui_extra)
-    # Full plugin-editor preview hosted in a standalone JUCE window.
-    juce_add_gui_app(OrchestralStudioReverbFullPreview
-        PRODUCT_NAME "Orchestral Studio Reverb UI Preview"
-    )
-    target_sources(OrchestralStudioReverbFullPreview PRIVATE
-        Source/Preview/FullPluginPreviewMain.cpp
-        Source/Plugin/PluginProcessor.cpp
-        Source/Plugin/PluginEditor.cpp
-        Source/UI/OrchestraLayoutComponent.cpp
-    )
-    target_include_directories(OrchestralStudioReverbFullPreview PRIVATE Source Source/DSP Source/UI)
-    target_compile_definitions(OrchestralStudioReverbFullPreview PRIVATE
-        JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0
-    )
-    target_link_libraries(OrchestralStudioReverbFullPreview PRIVATE
-        osr_dsp
-        juce::juce_audio_utils
-        juce::juce_gui_extra
-        juce::juce_dsp
-        juce::juce_recommended_config_flags
-        juce::juce_recommended_warning_flags
-    )
-    endif()
 
+    if(TARGET juce::juce_gui_extra)
+        # Full plugin-editor preview hosted in a standalone JUCE window.
+        juce_add_gui_app(OrchestralStudioReverbFullPreview
+            PRODUCT_NAME "Orchestral Studio Reverb UI Preview"
+        )
+        target_sources(OrchestralStudioReverbFullPreview PRIVATE
+            Source/Preview/FullPluginPreviewMain.cpp
+            Source/Plugin/PluginProcessor.cpp
+            Source/Plugin/PluginEditor.cpp
+            Source/UI/OrchestraLayoutComponent.cpp
+        )
+        target_include_directories(OrchestralStudioReverbFullPreview PRIVATE Source Source/DSP Source/UI)
+        target_compile_definitions(OrchestralStudioReverbFullPreview PRIVATE
+            JUCE_WEB_BROWSER=0
+            JUCE_USE_CURL=0
+            JucePlugin_Name=\"Orchestral Studio Reverb\"
+        )
+        target_link_libraries(OrchestralStudioReverbFullPreview PRIVATE
+            osr_dsp
+            juce::juce_audio_utils
+            juce::juce_gui_extra
+            juce::juce_dsp
+            juce::juce_recommended_config_flags
+            juce::juce_recommended_warning_flags
+        )
+    endif()
 endif()
