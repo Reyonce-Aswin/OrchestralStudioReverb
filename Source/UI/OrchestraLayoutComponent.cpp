@@ -288,7 +288,10 @@ void OrchestraLayoutComponent::setLayout(Layout layout, bool notify)
     rebuildSectors();
     int match = -1;
     for (std::size_t i = 0; i < sectors.size(); ++i)
-        if (sectors[i].parameterName == previousSelection) { match = static_cast<int>(i); break; }
+        if (sectors[i].parameterName == previousSelection
+            || (currentLayout == Layout::Classical && previousSelection == "Flutes"
+                && sectors[i].name == "Piccolos / Flutes"))
+        { match = static_cast<int>(i); break; }
     if (match >= 0) selectedIndex = match;
     resized();
     repaint();
@@ -300,7 +303,9 @@ void OrchestraLayoutComponent::setSelectedSection(const juce::String& name, bool
 {
     for (std::size_t i = 0; i < sectors.size(); ++i)
     {
-        if (sectors[i].parameterName == name || sectors[i].name == name)
+        if (sectors[i].parameterName == name || sectors[i].name == name
+            || (currentLayout == Layout::Classical && name == "Flutes"
+                && sectors[i].name == "Piccolos / Flutes"))
         {
             selectedIndex = static_cast<int>(i);
             repaint();
