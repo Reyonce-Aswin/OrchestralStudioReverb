@@ -53,8 +53,9 @@ public:
     {
         setUsingNativeTitleBar(true);
         setContentOwned(new PreviewContent(), true);
-        centreWithSize(1200, 660);
+        centreWithSize(1050, 720);
         setResizable(true, true);
+        setResizeLimits(760, 560, 1600, 1100);
         setVisible(true);
     }
 

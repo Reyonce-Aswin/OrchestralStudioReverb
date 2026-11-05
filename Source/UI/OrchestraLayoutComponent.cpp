@@ -30,8 +30,8 @@ OrchestraLayoutComponent::OrchestraLayoutComponent()
     // Angles descend from the left baseline (180 degrees) to the right (0).
     sectors = {
         { "Piano", 62, 100, 180,   0, false, false, "PIANO" },
-        { "Violin I", 108, 253, 180, 142, false, true, "VIOLIN I" },
-        { "Violin II", 110, 192, 142,  90, true, false, "VIOLIN II" },
+        { "Violins I", 108, 253, 180, 142, false, true, "VIOLINS I" },
+        { "Violins II", 110, 192, 142,  90, true, false, "VIOLINS II" },
         { "Violas", 110, 192,  90,  40, false, true, "VIOLAS" },
         { "Celli", 108, 217,  40,   0, true, false, "CELLI" },
         { "Basses", 228, 313,  40,   0, true, false, "BASSES" },
@@ -64,7 +64,8 @@ void OrchestraLayoutComponent::resized()
 
 juce::Path OrchestraLayoutComponent::buildSectorPath(const Sector& sector) const
 {
-    const float scale = static_cast<float>(getWidth()) / kDesignUnitsAt1200;
+    const float scale = juce::jmin(static_cast<float>(getWidth()) / kDesignUnitsAt1200,
+        juce::jmax(0.1f, (static_cast<float>(getHeight()) - 12.0f) / 388.0f));
     const juce::Point<float> centre(getWidth() * 0.5f, static_cast<float>(getHeight()));
     const float inner = sector.innerRadius * scale;
     const float outer = sector.outerRadius * scale;
@@ -138,7 +139,8 @@ void OrchestraLayoutComponent::paint(juce::Graphics& g)
                                  juce::PathStrokeType::rounded));
     }
 
-    const float scale = static_cast<float>(getWidth()) / kDesignUnitsAt1200;
+    const float scale = juce::jmin(static_cast<float>(getWidth()) / kDesignUnitsAt1200,
+        juce::jmax(0.1f, (static_cast<float>(getHeight()) - 12.0f) / 388.0f));
     const juce::Point<float> centre(getWidth() * 0.5f, static_cast<float>(getHeight()));
 
     g.setColour(labelColour);
