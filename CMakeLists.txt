@@ -83,4 +83,21 @@ if(OSR_BUILD_VST3)
     else()
         message(STATUS "JUCE not found: building standalone DSP library/tests only. Set JUCE_DIR or enable OSR_FETCH_JUCE.")
     endif()
+
+    if(TARGET juce::juce_gui_extra)
+        juce_add_gui_app(OrchestralStudioReverbInterfacePreview
+            PRODUCT_NAME "Orchestral Studio Reverb Interface Preview"
+        )
+        target_sources(OrchestralStudioReverbInterfacePreview PRIVATE
+            Source/Preview/InterfacePreviewMain.cpp
+        )
+        target_compile_definitions(OrchestralStudioReverbInterfacePreview PRIVATE
+            JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0
+        )
+        target_link_libraries(OrchestralStudioReverbInterfacePreview PRIVATE
+            juce::juce_gui_extra
+            juce::juce_recommended_config_flags
+            juce::juce_recommended_warning_flags
+        )
+    endif()
 endif()
