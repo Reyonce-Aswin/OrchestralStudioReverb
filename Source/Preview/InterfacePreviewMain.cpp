@@ -181,9 +181,9 @@ private:
   const juce::Point<float> anchor(c.x+std::cos(a)*radius,c.y-std::sin(a)*radius);
   const juce::String lines[2]={s.line1,s.line2}; const int count=juce::String(s.line2).isEmpty()?1:2;
   float size=12.0f; juce::Font font=standardFont(size);
-  auto widthOf=[&](const juce::String& t,const juce::Font& f){juce::GlyphArrangement ga;ga.addLineOfText(f,t,0.0f,0.0f);return juce::jmax(f.getStringWidth(t),ga.getBoundingBox(0,-1,true).getWidth());};
-  const float localWidth=juce::jmax(12.0f,2.0f*radius*std::sin(std::abs(juce::degreesToRadians(s.from-s.to))*0.5f)-8.0f);
-  auto maxLineWidth=[&](){float w=0.0f;for(int i=0;i<count;++i)w=juce::jmax(w,widthOf(lines[i],font));return w;};
+  auto widthOf=[&](const juce::String& t,const juce::Font& f){juce::GlyphArrangement ga;ga.addLineOfText(f,t,0.0f,0.0f);return juce::jmax(float(f.getStringWidth(t)),float(ga.getBoundingBox(0,-1,true).getWidth()));};
+  const float chordWidth=2.0f*radius*float(std::sin(std::abs(juce::degreesToRadians(s.from-s.to))*0.5f))-8.0f;\n   const float localWidth=juce::jmax(12.0f,chordWidth);
+  auto maxLineWidth=[&](){float w=0.0f;for(int i=0;i<count;++i)w=juce::jmax(w,float(widthOf(lines[i],font)));return w;};
   while(maxLineWidth()>localWidth&&size>9.0f){size=juce::jmax(9.0f,size-0.5f);font=standardFont(size);}
   float h=font.getHeight()*float(count);
   juce::Rectangle<float> box(anchor.x-localWidth*0.5f,anchor.y-h*0.5f,localWidth,h);
