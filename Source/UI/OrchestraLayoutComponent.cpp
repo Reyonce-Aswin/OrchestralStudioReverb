@@ -327,10 +327,22 @@ void OrchestraLayoutComponent::setLayout(Layout layout, bool notify)
     rebuildSectors();
     int match = -1;
     for (std::size_t i = 0; i < sectors.size(); ++i)
-        if (sectors[i].parameterName == previousSelection
-            || (currentLayout == Layout::Classical && previousSelection == "Flutes"
+    {
+        const auto& candidate = sectors[i].parameterName;
+        const bool violinAlias =
+            (previousSelection.equalsIgnoreCase("Violins I") && candidate.equalsIgnoreCase("VIOLIN I"))
+            || (previousSelection.equalsIgnoreCase("Violins II") && candidate.equalsIgnoreCase("VIOLIN II"))
+            || (previousSelection.equalsIgnoreCase("VIOLIN I") && candidate.equalsIgnoreCase("Violins I"))
+            || (previousSelection.equalsIgnoreCase("VIOLIN II") && candidate.equalsIgnoreCase("Violins II"));
+        const bool pianoAlias = previousSelection.equalsIgnoreCase("Piano")
+            && candidate.equalsIgnoreCase("HARPSICHORD / FORTEPIANO");
+        const bool timpaniAlias = previousSelection.equalsIgnoreCase("Percussion")
+            && candidate.equalsIgnoreCase("TIMPANI");
+        if (candidate.equalsIgnoreCase(previousSelection) || violinAlias || pianoAlias || timpaniAlias
+            || (currentLayout == Layout::Classical && previousSelection.equalsIgnoreCase("Flutes")
                 && sectors[i].name == "Piccolos / Flutes"))
         { match = static_cast<int>(i); break; }
+    }
     selectedIndex = match >= 0 ? match : juce::jmin(1, static_cast<int>(sectors.size()) - 1);
     juce::Logger::writeToLog("Orchestra layout sector count: " + juce::String(sectors.size()));
     jassert((currentLayout == Layout::ChamberModern || currentLayout == Layout::ChamberClassical)
@@ -345,8 +357,19 @@ void OrchestraLayoutComponent::setSelectedSection(const juce::String& name, bool
 {
     for (std::size_t i = 0; i < sectors.size(); ++i)
     {
-        if (sectors[i].parameterName == name || sectors[i].name == name
-            || (currentLayout == Layout::Classical && name == "Flutes"
+        const auto& candidate = sectors[i].parameterName;
+        const bool violinAlias =
+            (name.equalsIgnoreCase("Violins I") && candidate.equalsIgnoreCase("VIOLIN I"))
+            || (name.equalsIgnoreCase("Violins II") && candidate.equalsIgnoreCase("VIOLIN II"))
+            || (name.equalsIgnoreCase("VIOLIN I") && candidate.equalsIgnoreCase("Violins I"))
+            || (name.equalsIgnoreCase("VIOLIN II") && candidate.equalsIgnoreCase("Violins II"));
+        const bool pianoAlias = name.equalsIgnoreCase("Piano")
+            && candidate.equalsIgnoreCase("HARPSICHORD / FORTEPIANO");
+        const bool timpaniAlias = name.equalsIgnoreCase("Percussion")
+            && candidate.equalsIgnoreCase("TIMPANI");
+        if (candidate.equalsIgnoreCase(name) || sectors[i].name.equalsIgnoreCase(name)
+            || violinAlias || pianoAlias || timpaniAlias
+            || (currentLayout == Layout::Classical && name.equalsIgnoreCase("Flutes")
                 && sectors[i].name == "Piccolos / Flutes"))
         {
             selectedIndex = static_cast<int>(i);
