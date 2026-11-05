@@ -163,7 +163,10 @@ private:
             case Type::LowShelf:
             case Type::HighShelf:
             {
-                const float shelfAlpha = (sine * 0.5f) * std::sqrt(2.0f);
+                const float shelfSlope = std::clamp(q, 0.1f, 2.0f);
+                const float shelfTerm = std::max(0.1f,
+                    (amplitude + 1.0f / amplitude) * (1.0f / shelfSlope - 1.0f) + 2.0f);
+                const float shelfAlpha = (sine * 0.5f) * std::sqrt(shelfTerm);
                 const float root = 2.0f * std::sqrt(amplitude) * shelfAlpha;
                 if (type == Type::LowShelf)
                 {
