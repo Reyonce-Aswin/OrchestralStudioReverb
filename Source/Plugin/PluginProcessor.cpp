@@ -54,7 +54,7 @@ OrchestralStudioReverbAudioProcessor::createParameterLayout()
             "EQ " + String(band + 1) + " Q",
             NormalisableRange<float>(0.3f, (band == 0 || band == 7) ? 2.0f : 8.0f,
                                     0.01f, 0.5f),
-            (band == 0 || band == 7) ? 1.0f : 0.7071f));
+            0.7071f));
         layout.add(std::make_unique<AudioParameterChoice>(ParameterID { prefix + "Slope", 1 },
             "EQ " + String(band + 1) + " Slope", cutSlopeChoices, 1));
         if (band == 0)
