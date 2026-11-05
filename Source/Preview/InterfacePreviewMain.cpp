@@ -133,7 +133,7 @@ private:
  }
  template<size_t N> void drawSectors(juce::Graphics&g,const std::array<Sector,N>&sectors,juce::Point<float>c,juce::Rectangle<float>r)
  {
-  for(const auto&s:sectors){auto p=sectorPath(s,c,r);bool sel=s.name==selectedName;g.setColour(sel?selected:fill);g.fillPath(p);g.setColour(sel?blue:ink.withAlpha(0.92f));g.strokePath(p,juce::PathStrokeType(sel?2.5f:1.5f));
+  for(const auto&s:sectors){auto p=sectorPath(s,c,r);bool sel=juce::String(s.name)==selectedName;g.setColour(sel?selected:fill);g.fillPath(p);g.setColour(sel?blue:ink.withAlpha(0.92f));g.strokePath(p,juce::PathStrokeType(sel?2.5f:1.5f));
    float a=juce::degreesToRadians((s.from+s.to)*0.5f),rad=(inner[size_t(s.ring)]+outer[size_t(s.ring)])*0.675f*scaleFor(r);
    float x=c.x+std::cos(a)*rad,y=c.y-std::sin(a)*rad;float width=juce::jmax(40.0f,rad*2*std::sin(std::abs(juce::degreesToRadians(s.from-s.to))*0.5f)-8);
    drawText(g,s.label,int(x-width*0.5f),int(y-14),int(width),28,s.ring==0?10:(s.to-s.from<25?8.0f:9.0f),sel?juce::Colours::white:ink,juce::Justification::centred);
