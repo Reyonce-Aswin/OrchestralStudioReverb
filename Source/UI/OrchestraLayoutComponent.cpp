@@ -352,7 +352,7 @@ void OrchestraLayoutComponent::setLayout(Layout layout, bool notify)
     for (std::size_t i = 0; i < sectors.size(); ++i)
         if (sectors[i].parameterName == previousSelection
             || (currentLayout == Layout::Classical && previousSelection == "Flutes"
-                && sectors[i].name == "PICCOLOS / FLUTES"))
+                && sectors[i].name == "Piccolos / Flutes"))
         { match = static_cast<int>(i); break; }
     selectedIndex = match >= 0 ? match : juce::jmin(1, static_cast<int>(sectors.size()) - 1);
     juce::Logger::writeToLog("Orchestra layout sector count: " + juce::String(sectors.size()));
@@ -370,7 +370,7 @@ void OrchestraLayoutComponent::setSelectedSection(const juce::String& name, bool
     {
         if (sectors[i].parameterName == name || sectors[i].name == name
             || (currentLayout == Layout::Classical && name == "Flutes"
-                && sectors[i].name == "PICCOLOS / FLUTES"))
+                && sectors[i].name == "Piccolos / Flutes"))
         {
             selectedIndex = static_cast<int>(i);
             repaint();
@@ -396,7 +396,7 @@ juce::String OrchestraLayoutComponent::getTitle() const
 {
     switch (currentLayout)
     {
-        case Layout::Standard: return "CHAMBER ORCHESTRA - MODERN";
+        case Layout::Standard: return "FULL ORCHESTRA - MODERN";
         case Layout::Classical: return "FULL ORCHESTRA - CLASSICAL (ANTIPHONAL)";
         case Layout::ChamberModern: return "CHAMBER ORCHESTRA - MODERN";
         case Layout::ChamberClassical: return "CHAMBER ORCHESTRA - CLASSICAL (ANTIPHONAL)";
