@@ -139,7 +139,8 @@ void OrchestraLayoutComponent::paint(juce::Graphics& g)
                                  juce::PathStrokeType::rounded));
     }
 
-    const float scale = static_cast<float>(getWidth()) / kDesignUnitsAt1200;
+    const float scale = juce::jmin(static_cast<float>(getWidth()) / kDesignUnitsAt1200,
+        static_cast<float>(getHeight()) / 388.0f);
     const juce::Point<float> centre(getWidth() * 0.5f, static_cast<float>(getHeight()));
 
     g.setColour(labelColour);
