@@ -72,6 +72,13 @@ public:
 
             for (auto& channel : filters[static_cast<std::size_t>(index)][static_cast<std::size_t>(stage)])
             {
+                const bool unchanged = std::abs(channel.target.b0 - target.b0) < 1.0e-7f
+                    && std::abs(channel.target.b1 - target.b1) < 1.0e-7f
+                    && std::abs(channel.target.b2 - target.b2) < 1.0e-7f
+                    && std::abs(channel.target.a1 - target.a1) < 1.0e-7f
+                    && std::abs(channel.target.a2 - target.a2) < 1.0e-7f;
+                if (unchanged)
+                    continue;
                 channel.target = target;
                 channel.remaining = smoothingSamples;
                 channel.step.b0 = (target.b0 - channel.current.b0) / static_cast<float>(smoothingSamples);
