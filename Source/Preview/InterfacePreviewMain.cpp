@@ -49,7 +49,7 @@ const std::array<float,5> inner {{62,108,213,273,333}}, outer {{100,205,265,325,
 class Preview final : public juce::Component
 {
 public:
- Preview(){ setSize(1000,700); setWantsKeyboardFocus(true); }
+ Preview(){ setSize(1000,700); setWantsKeyboardFocus(true); juce::Logger::writeToLog("Standard layout sector count: "+juce::String(standard.size())); }
  void paint(juce::Graphics& g) override
  {
   g.fillAll(bg); auto area=getLocalBounds().toFloat();
