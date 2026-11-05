@@ -1,0 +1,54 @@
+name: Chamber orchestra UI preview
+
+on:
+  push:
+    branches: ['preview/chamber-layouts']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-preview:
+    name: Windows standalone preview (no VST3)
+    runs-on: windows-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure CMake with JUCE
+        run: >
+          cmake -S . -B build -A x64
+          -DOSR_FETCH_JUCE=ON
+          -DOSR_BUILD_VST3=ON
+          -DOSR_BUILD_TESTS=ON
+
+      - name: Build standalone preview and DSP tests only
+        run: >
+          cmake --build build --config Release
+          --target OrchestralStudioReverbFullPreview osr_fdn_tests osr_early_reflections_tests
+          --parallel 2
+
+      - name: Run DSP tests
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Package preview executable
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path build -Filter '*UI Preview.exe' -Recurse |
+            Where-Object { $_.FullName -match 'Release' } |
+            Select-Object -First 1
+          if (-not $exe) { throw 'Standalone preview executable not found.' }
+          New-Item -ItemType Directory -Force -Path package | Out-Null
+          Copy-Item $exe.FullName package/
+          Compress-Archive -Path package/* -DestinationPath OrchestralStudioReverb-Chamber-Preview.zip -Force
+
+      - name: Upload chamber preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: OrchestralStudioReverb-Chamber-Preview
+          path: OrchestralStudioReverb-Chamber-Preview.zip
+          if-no-files-found: error
+          retention-days: 14
