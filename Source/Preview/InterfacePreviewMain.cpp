@@ -121,7 +121,15 @@ private:
  }
  void mouseExit(const juce::MouseEvent&) override {if(hoveredName.isNotEmpty()){hoveredName.clear();repaint();}}
  static void rounded(juce::Graphics&g,juce::Rectangle<float>r,juce::Colour stroke,juce::Colour fillc){g.setColour(fillc);g.fillRoundedRectangle(r,9);g.setColour(stroke);g.drawRoundedRectangle(r,9,1);}
- static void drawText(juce::Graphics&g,const juce::String&s,int x,int y,int w,int h,float size,juce::Colour c,juce::Justification j=juce::Justification::centredLeft){g.setColour(c);g.setFont(juce::Font(size));g.drawFittedText(s,{x,y,w,h},j,2);}
+ static juce::Font uiFont(float size,bool bold=false)
+ {
+  juce::FontOptions options;
+  auto font=juce::Font(options.withName("Inter").withHeight(size).withStyle(bold?"Bold":"Regular"));
+  if(!font.getTypefaceName().containsIgnoreCase("Inter"))
+   font=juce::Font(options.withName("Arial").withHeight(size).withStyle(bold?"Bold":"Regular"));
+  return font;
+ }
+ static void drawText(juce::Graphics&g,const juce::String&s,int x,int y,int w,int h,float size,juce::Colour c,juce::Justification j=juce::Justification::centredLeft){g.setColour(c);g.setFont(uiFont(size));g.drawFittedText(s,{x,y,w,h},j,2);}
  static void knob(juce::Graphics&g,float cx,float cy,const juce::String&name,const juce::String&value,float amount=0.68f)
  {
   constexpr float radius=19.0f;
@@ -159,7 +167,7 @@ private:
  }
  static void drawSpacedHeading(juce::Graphics& g,const juce::String& text,int x,int y,int w,int h,float size,juce::Colour colour)
  {
-  juce::Font font(size,juce::Font::bold);
+  juce::Font font=uiFont(size,true);
   float total=0.0f;
   for(int i=0;i<text.length();++i)total+=font.getStringWidth(text.substring(i,i+1))+1.4f;
   float cursor=float(x)+(float(w)-total)*0.5f;
