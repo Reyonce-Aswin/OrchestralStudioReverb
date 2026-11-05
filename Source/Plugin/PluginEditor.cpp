@@ -14,7 +14,7 @@ OrchestralStudioReverbAudioProcessorEditor::OrchestralStudioReverbAudioProcessor
                                       const juce::String& text)
     {
         slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-        slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 82, 22);
+        slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 76, 22);
         slider.setColour(juce::Slider::rotarySliderFillColourId, bronze);
         slider.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour::fromRGB(72, 69, 64));
         slider.setColour(juce::Slider::thumbColourId, juce::Colour::fromRGB(232, 215, 183));
@@ -26,15 +26,18 @@ OrchestralStudioReverbAudioProcessorEditor::OrchestralStudioReverbAudioProcessor
         addAndMakeVisible(slider);
         addAndMakeVisible(label);
     };
+
     setupSlider(decay, decayLabel, "DECAY");
     setupSlider(damping, dampingLabel, "DAMPING");
+    setupSlider(dry, dryLabel, "DRY");
     setupSlider(wet, wetLabel, "WET");
 
     auto& state = processor.getParameters();
     decayAttachment = std::make_unique<Attachment>(state, "decay", decay);
     dampingAttachment = std::make_unique<Attachment>(state, "damping", damping);
+    dryAttachment = std::make_unique<Attachment>(state, "dry", dry);
     wetAttachment = std::make_unique<Attachment>(state, "wet", wet);
-    setSize(620, 360);
+    setSize(760, 370);
 }
 
 void OrchestralStudioReverbAudioProcessorEditor::paint(juce::Graphics& g)
@@ -46,20 +49,20 @@ void OrchestralStudioReverbAudioProcessorEditor::paint(juce::Graphics& g)
     g.fillRoundedRectangle(getLocalBounds().toFloat().reduced(18.0f).withTop(88.0f), 8.0f);
     g.setColour(juce::Colour::fromRGB(177, 163, 140));
     g.setFont(12.0f);
-    g.drawText("FDN ENGINE  /  EARLY REFLECTIONS NEXT", 34, getHeight() - 32,
+    g.drawText("PARALLEL DRY / WET  /  FDN ENGINE", 34, getHeight() - 32,
                getWidth() - 68, 18, juce::Justification::centredLeft);
 }
 
 void OrchestralStudioReverbAudioProcessorEditor::resized()
 {
     title.setBounds(30, 22, getWidth() - 60, 34);
-    const int sectionWidth = (getWidth() - 100) / 3;
-    const int x0 = 40;
+    const int sectionWidth = (getWidth() - 100) / 4;
+    const int x0 = 30;
     const int top = 112;
-    const int sliderSize = 150;
-    juce::Slider* sliders[] = { &decay, &damping, &wet };
-    juce::Label* labels[] = { &decayLabel, &dampingLabel, &wetLabel };
-    for (int i = 0; i < 3; ++i)
+    const int sliderSize = 132;
+    juce::Slider* sliders[] = { &decay, &damping, &dry, &wet };
+    juce::Label* labels[] = { &decayLabel, &dampingLabel, &dryLabel, &wetLabel };
+    for (int i = 0; i < 4; ++i)
     {
         const int x = x0 + i * (sectionWidth + 10);
         labels[i]->setBounds(x, top, sectionWidth, 22);
