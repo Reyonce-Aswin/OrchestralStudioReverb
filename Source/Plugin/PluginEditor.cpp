@@ -362,10 +362,12 @@ void OSREQGraph::paint(juce::Graphics& g)
         const auto prefix = "eqBand" + juce::String(band + 1);
         const float frequency = value(prefix + "Freq");
         const float gain = value(prefix + "Gain");
+        const float q = value(prefix + "Q");
         const int type = juce::roundToInt(value(prefix + "Type"));
         const bool cut = (band == 0 && type == 0) || (band == 7 && type == 1);
         const float x = frequencyToX(frequency);
-        const float y = gainToY(cut ? 0.0f : gain);
+        const float resonancePreview = juce::jlimit(-12.0f, 12.0f, (q - 0.7071f) * 12.0f);
+        const float y = gainToY(cut ? resonancePreview : gain);
         const bool enabled = value(prefix + "Enabled") > 0.5f;
         g.setColour(enabled ? juce::Colour(0xC9, 0xCC, 0xD8) : muted);
         g.fillEllipse(x - (band == selectedBand ? 6.0f : 4.0f),
@@ -390,9 +392,11 @@ void OSREQGraph::mouseDown(const juce::MouseEvent& event)
         const float frequency = state().getRawParameterValue(prefix + "Freq")->load();
         const float x = frequencyToX(frequency);
         const float gain = state().getRawParameterValue(prefix + "Gain")->load();
+        const float q = state().getRawParameterValue(prefix + "Q")->load();
         const int type = juce::roundToInt(state().getRawParameterValue(prefix + "Type")->load());
         const bool cut = (band == 0 && type == 0) || (band == 7 && type == 1);
-        const float y = gainToY(cut ? 0.0f : gain);
+        const float resonancePreview = juce::jlimit(-12.0f, 12.0f, (q - 0.7071f) * 12.0f);
+        const float y = gainToY(cut ? resonancePreview : gain);
         const float distance = std::hypot(event.position.x - x, event.position.y - y);
         if (distance < nearestDistance) { nearestDistance = distance; nearest = band; }
     }
@@ -414,13 +418,17 @@ void OSREQGraph::mouseDrag(const juce::MouseEvent& event)
     }
     const int type = juce::roundToInt(state().getRawParameterValue(prefix + "Type")->load());
     const bool cut = (selectedBand == 0 && type == 0) || (selectedBand == 7 && type == 1);
-    if (!cut)
-        if (auto* parameter = state().getParameter(prefix + "Gain"))
-        {
-            parameter->beginChangeGesture();
-            parameter->setValueNotifyingHost(parameter->convertTo0to1(yToGain(event.position.y)));
-            parameter->endChangeGesture();
-        }
+    const auto verticalValue = yToGain(event.position.y);
+    const auto parameterID = cut ? prefix + "Q" : prefix + "Gain";
+    if (auto* parameter = state().getParameter(parameterID))
+    {
+        const float value = cut
+            ? juce::jlimit(0.3f, 2.0f, 0.7071f + verticalValue / 12.0f)
+            : verticalValue;
+        parameter->beginChangeGesture();
+        parameter->setValueNotifyingHost(parameter->convertTo0to1(value));
+        parameter->endChangeGesture();
+    }
     repaint();
 }
 
