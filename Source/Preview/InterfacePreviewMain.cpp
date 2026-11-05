@@ -92,8 +92,6 @@ public:
   if(p.y>=98&&p.y<=140&&p.x>=27&&p.x<=259){layout=p.x<143?0:1; selectedName=layout==0?"Violas":"Violins II"; repaint(); return;}
   if(p.y>=10&&p.y<=44&&p.x>=450&&p.x<=730){preset=(preset+1)%presets.size(); repaint(); return;}
   auto r=stageRect(); auto centre=juce::Point<float>(r.getCentreX(),r.getBottom());
-  const auto& list=layout==0?*reinterpret_cast<const std::array<Sector,18>*>(nullptr):antiphonal;
-  juce::ignoreUnused(list);
   if(!r.contains(p))return;
   auto hit=[&](const auto& sectors){for(const auto& s:sectors){auto path=sectorPath(s,centre,r);if(path.contains(p)){selectedName=s.name;repaint();return true;}}return false;};
   if(layout==0){ for(const auto& s:standard) if(sectorPath(s,centre,r).contains(p)){selectedName=s.name;repaint();break;} }
