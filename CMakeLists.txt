@@ -100,7 +100,6 @@ if(OSR_BUILD_VST3)
         target_compile_definitions(OrchestralStudioReverbFullPreview PRIVATE
             JUCE_WEB_BROWSER=0
             JUCE_USE_CURL=0
-            JucePlugin_Name=\"Orchestral Studio Reverb\"
         )
         target_link_libraries(OrchestralStudioReverbFullPreview PRIVATE
             osr_dsp
