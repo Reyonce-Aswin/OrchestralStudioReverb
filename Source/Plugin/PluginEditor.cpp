@@ -239,6 +239,7 @@ void OSREQGraph::paint(juce::Graphics& g)
         return parameters.getRawParameterValue(id)->load();
     };
     const bool eqBypassed = value("eqBypass") > 0.5f;
+    const float displaySampleRate = static_cast<float>(std::max(1000.0, processor.getSampleRate()));
     juce::Path response;
     for (int sample = 0; sample <= 240; ++sample)
     {
@@ -270,7 +271,7 @@ void OSREQGraph::paint(juce::Graphics& g)
             const bool lowCut = band == 0 && typeChoice == 0;
             const bool highCut = band == 7 && typeChoice == 1;
             const int type = lowCut ? 0 : (highCut ? 4 : (band == 0 ? 1 : (band == 7 ? 3 : 2)));
-            const float w0 = 2.0f * kPi * centre / 48000.0f;
+            const float w0 = 2.0f * kPi * centre / displaySampleRate;
             const float cosine = std::cos(w0), sine = std::sin(w0);
             const int slope = juce::roundToInt(value(prefix + "Slope"));
             const bool isCut = lowCut || highCut;
@@ -287,12 +288,12 @@ void OSREQGraph::paint(juce::Graphics& g)
             {
                 if (firstOrder && stage == biquadStages)
                 {
-                    const float k = std::tan(kPi * centre / 48000.0f);
+                    const float k = std::tan(kPi * centre / displaySampleRate);
                     const float norm = 1.0f / (1.0f + k);
                     const float b0 = lowCut ? norm : k * norm;
                     const float b1 = lowCut ? -norm : k * norm;
                     const float a1 = (k - 1.0f) * norm;
-                    responseDb += magnitudeDb(b0, b1, 0.0f, a1, 0.0f, frequency, 48000.0f);
+                    responseDb += magnitudeDb(b0, b1, 0.0f, a1, 0.0f, frequency, displaySampleRate);
                     continue;
                 }
                 const float stageQ = isCut
@@ -339,7 +340,7 @@ void OSREQGraph::paint(juce::Graphics& g)
                 }
                 const float invA0 = 1.0f / a0;
                 responseDb += magnitudeDb(b0 * invA0, b1 * invA0, b2 * invA0,
-                                          a1 * invA0, a2 * invA0, frequency, 48000.0f);
+                                          a1 * invA0, a2 * invA0, frequency, displaySampleRate);
             }
         }
         const float x = plot.getX() + proportion * plot.getWidth();
