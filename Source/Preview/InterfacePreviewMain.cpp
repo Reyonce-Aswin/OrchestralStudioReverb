@@ -119,7 +119,7 @@ public:
  }
 private:
  std::array<juce::String,6> presets{{"Concert Hall","Small Chamber","Scoring Stage","Cathedral","Studio Room","Symphonic Hall"}};
- int preset=0,layout=1; juce::String selectedName="Violins II", hoveredName;
+ int preset=0,layout=0; juce::String selectedName="Violins I", hoveredName;
  juce::Rectangle<float> stageRect()const{return {298,97,674,345};}
  void mouseMove(const juce::MouseEvent& e) override
  {
@@ -280,7 +280,8 @@ private:
   for(const auto&s:sectors){auto p=sectorPath(s,c,r);bool sel=juce::String(s.name)==selectedName;g.setColour(sel?selected:fill);g.fillPath(p);g.setColour(sel?blue:ink.withAlpha(0.92f));g.strokePath(p,juce::PathStrokeType(sel?2.5f:1.5f));
    float a=juce::degreesToRadians((s.from+s.to)*0.5f),rad=(inner[size_t(s.ring)]+outer[size_t(s.ring)])*0.675f*scaleFor(r);
    float x=c.x+std::cos(a)*rad,y=c.y-std::sin(a)*rad;float width=juce::jmax(40.0f,rad*2*std::sin(std::abs(juce::degreesToRadians(s.from-s.to))*0.5f)-8);
-   drawText(g,s.label,int(x-width*0.5f),int(y-14),int(width),28,s.ring==0?10:(s.to-s.from<25?8.0f:9.0f),sel?juce::Colours::white:ink,juce::Justification::centred);
+   const float labelSize=s.ring==0?10.0f:(s.to-s.from<25?9.0f:9.5f);
+   drawText(g,s.label,int(x-width*0.5f),int(y-14),int(width),28,labelSize,sel?juce::Colours::white:ink,juce::Justification::centred);
   }
  }
  static float scaleFor(juce::Rectangle<float>r){return juce::jmin(r.getWidth()/1200.0f,r.getHeight()/519.75f);}
