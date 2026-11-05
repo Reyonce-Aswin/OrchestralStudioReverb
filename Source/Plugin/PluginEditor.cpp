@@ -89,8 +89,20 @@ void OSRControlLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, in
         g.fillEllipse(sliderPos - 5.0f, cy - 5.0f, 10.0f, 10.0f);
     }
     else
-        juce::LookAndFeel_V4::drawLinearSlider(g, x, y, width, height, sliderPos,
-                                                0.0f, 0.0f, style, *static_cast<juce::Slider*>(nullptr));
+    {
+        const float cx = static_cast<float>(x) + static_cast<float>(width) * 0.5f;
+        const float cy = static_cast<float>(y) + static_cast<float>(height) * 0.5f;
+        g.setColour(sliderTrack);
+        g.fillRoundedRectangle(static_cast<float>(x), cy - 2.0f,
+                               static_cast<float>(width), 4.0f, 2.0f);
+        g.setColour(sliderFill);
+        g.fillRoundedRectangle(static_cast<float>(x), cy - 2.0f,
+                               juce::jlimit(0.0f, static_cast<float>(width), sliderPos - static_cast<float>(x)),
+                               4.0f, 2.0f);
+        g.setColour(juce::Colours::white);
+        g.fillEllipse(sliderPos - 5.0f, cy - 5.0f, 10.0f, 10.0f);
+        juce::ignoreUnused(cx);
+    }
 }
 
 OrchestralStudioReverbAudioProcessorEditor::OrchestralStudioReverbAudioProcessorEditor(
