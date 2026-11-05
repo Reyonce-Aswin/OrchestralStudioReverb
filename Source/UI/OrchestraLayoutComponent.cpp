@@ -1,5 +1,4 @@
 #include "OrchestraLayoutComponent.h"
-
 #include <cmath>
 
 namespace
@@ -12,12 +11,18 @@ const juce::Colour outlineColour    { 0xE6, 0xE9, 0xF2 };
 const juce::Colour selectedOutline  { 0x8D, 0xB4, 0xFF };
 const juce::Colour labelColour      { 0xEE, 0xF0, 0xF7 };
 constexpr float kPi = 3.14159265358979323846f;
-constexpr float kGapPixels = 5.0f;
-constexpr float kDesignUnitsAt1200 = 750.0f;
 
-float toRadians(float degrees) noexcept
+float radians(float degrees) noexcept { return degrees * kPi / 180.0f; }
+
+juce::Font makeLabelFont(float height, bool bold = false)
 {
-    return degrees * kPi / 180.0f;
+    juce::FontOptions options;
+    auto font = juce::Font(options.withName("Inter").withHeight(height)
+                                .withStyle(bold ? "SemiBold" : "Regular"));
+    if (!font.getTypefaceName().containsIgnoreCase("Inter"))
+        font = juce::Font(options.withName("Arial").withHeight(height)
+                              .withStyle(bold ? "Bold" : "Regular"));
+    return font;
 }
 }
 
@@ -25,35 +30,74 @@ OrchestraLayoutComponent::OrchestraLayoutComponent()
 {
     setOpaque(true);
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
+    rebuildSectors();
+    juce::Logger::writeToLog("Standard orchestra layout sectors: 19");
+}
 
-    // Exact values supplied in the layout specification.
-    // Angles descend from the left baseline (180 degrees) to the right (0).
-    sectors = {
-        { "Piano", 62, 100, 180,   0, false, false, "PIANO" },
-        { "Violins I", 108, 253, 180, 142, false, true, "VIOLINS I" },
-        { "Violins II", 110, 192, 142,  90, true, false, "VIOLINS II" },
-        { "Violas", 110, 192,  90,  40, false, true, "VIOLAS" },
-        { "Celli", 108, 217,  40,   0, true, false, "CELLI" },
-        { "Basses", 228, 313,  40,   0, true, false, "BASSES" },
-        { "Piccolos", 202, 254, 142, 121, true, false, "PICCOLOS" },
-        { "Flutes", 202, 254, 121, 100, false, false, "FLUTES" },
-        { "Oboes", 202, 254, 100,  79, false, false, "OBOES" },
-        { "Clarinets", 202, 254,  79,  58, false, false, "CLARINETS" },
-        { "Bassoons", 202, 254,  58,  40, false, true, "BASSOONS" },
-        { "Horns", 262, 318, 180, 143, false, true, "HORNS" },
-        { "Harp / Celeste", 262, 318, 143, 111, true, false, "HARP /\nCELESTE" },
-        { "Percussion", 262, 318, 111, 69,
-          false, false, "PERCUSSION" },
-        { "Tuned Percussion", 262, 318, 69, 40,
-          false, true, "TUNED\nPERCUSSION" },
-        { "Trumpets", 326, 388, 40, 30, false, false, "TRUMPETS" },
-        { "Tenor Trombones", 326, 388, 30, 20, false, false, "TENOR\nTROMBONES" },
-        { "Bass Trombones", 326, 388, 20, 12, false, false, "BASS\nTROMBONES" },
-        { "Tuba", 326, 388, 12,  0, false, false, "TUBA" }
-    };
+void OrchestraLayoutComponent::rebuildSectors()
+{
+    sectors.clear();
 
-    selectedIndex = 3; // Reference image starts with Violas selected.
+    if (currentLayout == Layout::Standard)
+    {
+        sectors = {
+            { "Piano", "Piano", 62, 100, 180, 0, false, false, "PIANO" },
+            { "Violins I", "Violins I", 108, 253, 180, 142, false, true, "VIOLINS I" },
+            { "Violins II", "Violins II", 110, 192, 142, 90, true, false, "VIOLINS II" },
+            { "Violas", "Violas", 110, 192, 90, 40, false, true, "VIOLAS" },
+            { "Celli", "Celli", 108, 217, 40, 0, true, false, "CELLI" },
+            { "Basses", "Basses", 228, 313, 40, 0, true, false, "BASSES" },
+            { "Piccolos", "Piccolos", 202, 254, 142, 121, true, false, "PICCOLOS" },
+            { "Flutes", "Flutes", 202, 254, 121, 100, false, false, "FLUTES" },
+            { "Oboes", "Oboes", 202, 254, 100, 79, false, false, "OBOES" },
+            { "Clarinets", "Clarinets", 202, 254, 79, 58, false, false, "CLARINETS" },
+            { "Bassoons", "Bassoons", 202, 254, 58, 40, false, true, "BASSOONS" },
+            { "Horns", "Horns", 262, 318, 180, 143, false, true, "HORNS" },
+            { "Harp / Celeste", "Harp / Celeste", 262, 318, 143, 111, true, false, "HARP /\nCELESTE" },
+            { "Percussion", "Percussion", 262, 318, 111, 69, false, false, "PERCUSSION" },
+            { "Tuned Percussion", "Tuned Percussion", 262, 318, 69, 40, false, true, "TUNED\nPERCUSSION" },
+            { "Trumpets", "Trumpets", 326, 388, 40, 30, false, false, "TRUMPETS" },
+            { "Tenor Trombones", "Tenor Trombones", 326, 388, 30, 20, false, false, "TENOR\nTROMBONES" },
+            { "Bass Trombones", "Bass Trombones", 326, 388, 20, 12, false, false, "BASS\nTROMBONES" },
+            { "Tuba", "Tuba", 326, 388, 12, 0, false, false, "TUBA" }
+        };
+    }
+    else
+    {
+        sectors = {
+            { "Piano", "Piano", 62, 100, 180, 0, false, false, "PIANO" },
+            { "Violins I", "Violins I", 108, 205, 180, 140, false, false, "VIOLINS I" },
+            { "Celli", "Celli", 108, 205, 140, 90, false, false, "CELLI" },
+            { "Violas", "Violas", 108, 205, 90, 40, false, false, "VIOLAS" },
+            { "Violins II", "Violins II", 108, 205, 40, 0, false, false, "VIOLINS II" },
+            { "Basses", "Basses", 213, 265, 150, 118, false, false, "BASSES" },
+            { "Piccolos / Flutes", "Piccolos", 213, 265, 118, 94, false, false, "PICCOLOS /\nFLUTES" },
+            { "Oboes", "Oboes", 213, 265, 94, 70, false, false, "OBOES" },
+            { "Clarinets", "Clarinets", 213, 265, 70, 46, false, false, "CLARINETS" },
+            { "Bassoons", "Bassoons", 213, 265, 46, 22, false, false, "BASSOONS" },
+            { "Harp / Celeste", "Harp / Celeste", 273, 325, 180, 152, false, false, "HARP /\nCELESTE" },
+            { "Horns", "Horns", 273, 325, 148, 120, false, false, "HORNS" },
+            { "Trumpets", "Trumpets", 273, 325, 120, 98, false, false, "TRUMPETS" },
+            { "Tenor Trombones", "Tenor Trombones", 273, 325, 98, 78, false, false, "TENOR\nTROMBONES" },
+            { "Bass Trombones", "Bass Trombones", 273, 325, 78, 60, false, false, "BASS\nTROMBONES" },
+            { "Tuba", "Tuba", 273, 325, 60, 44, false, false, "TUBA" },
+            { "Percussion", "Percussion", 333, 385, 125, 68, false, false, "PERCUSSION" },
+            { "Tuned Percussion", "Tuned Percussion", 333, 385, 68, 38, false, false, "TUNED PERCUSSION" }
+        };
+    }
+
+    selectedIndex = juce::jlimit(0, static_cast<int>(sectors.size()) - 1, selectedIndex);
     sectorPaths.resize(sectors.size());
+    resized();
+}
+
+float OrchestraLayoutComponent::getLayoutScale() const noexcept
+{
+    if (currentLayout == Layout::Standard)
+        return juce::jmin(static_cast<float>(getWidth()) / 750.0f,
+                          static_cast<float>(getHeight()) / 388.0f);
+    return 1.35f * juce::jmin(static_cast<float>(getWidth()) / 1200.0f,
+                              static_cast<float>(getHeight()) / 519.75f);
 }
 
 void OrchestraLayoutComponent::resized()
@@ -64,47 +108,42 @@ void OrchestraLayoutComponent::resized()
 
 juce::Path OrchestraLayoutComponent::buildSectorPath(const Sector& sector) const
 {
-    const float scale = juce::jmin(static_cast<float>(getWidth()) / kDesignUnitsAt1200,
-        static_cast<float>(getHeight()) / 388.0f);
-    const juce::Point<float> centre(getWidth() * 0.5f, static_cast<float>(getHeight()));
+    const float scale = getLayoutScale();
     const float inner = sector.innerRadius * scale;
     const float outer = sector.outerRadius * scale;
+    const juce::Point<float> centre(getWidth() * 0.5f, static_cast<float>(getHeight()));
 
-    // Offset only the specified radial edge by a constant 5 px into this
-    // sector. The intersection angle differs at the inner and outer radii,
-    // which keeps the visible gap width constant along the radial boundary.
-    const float startOuter = toRadians(sector.fromDegrees)
-        - (sector.gapAtStart ? std::asin(kGapPixels / outer) : 0.0f);
-    const float startInner = toRadians(sector.fromDegrees)
-        - (sector.gapAtStart ? std::asin(kGapPixels / inner) : 0.0f);
-    const float endOuter = toRadians(sector.toDegrees)
-        + (sector.gapAtEnd ? std::asin(kGapPixels / outer) : 0.0f);
-    const float endInner = toRadians(sector.toDegrees)
-        + (sector.gapAtEnd ? std::asin(kGapPixels / inner) : 0.0f);
+    auto shiftedAngle = [](float degrees, float radius, bool isStart, bool hasGap)
+    {
+        if (!hasGap || radius <= 0.0f)
+            return radians(degrees);
+        const float delta = std::asin(juce::jlimit(0.0f, 0.999f, 5.0f / radius));
+        return radians(degrees) + (isStart ? -delta : delta);
+    };
+
+    const float outerStart = shiftedAngle(sector.fromDegrees, outer, true, sector.gapAtStart);
+    const float outerEnd   = shiftedAngle(sector.toDegrees, outer, false, sector.gapAtEnd);
+    const float innerStart = shiftedAngle(sector.fromDegrees, inner, true, sector.gapAtStart);
+    const float innerEnd   = shiftedAngle(sector.toDegrees, inner, false, sector.gapAtEnd);
 
     juce::Path path;
-    constexpr int arcSegments = 48;
+    constexpr int arcSegments = 72;
     for (int i = 0; i <= arcSegments; ++i)
     {
-        const float proportion = static_cast<float>(i) / static_cast<float>(arcSegments);
-        const float angle = startOuter + (endOuter - startOuter) * proportion;
+        const float t = static_cast<float>(i) / static_cast<float>(arcSegments);
+        const float angle = outerStart + (outerEnd - outerStart) * t;
         const juce::Point<float> point(centre.x + std::cos(angle) * outer,
-                                        centre.y - std::sin(angle) * outer);
-        if (i == 0)
-            path.startNewSubPath(point);
-        else
-            path.lineTo(point);
+                                       centre.y - std::sin(angle) * outer);
+        if (i == 0) path.startNewSubPath(point); else path.lineTo(point);
     }
 
-    // Radial edge from outer to inner arc.
-    path.lineTo(centre.x + std::cos(endInner) * inner,
-                centre.y - std::sin(endInner) * inner);
+    path.lineTo(centre.x + std::cos(innerEnd) * inner,
+                centre.y - std::sin(innerEnd) * inner);
 
-    // Inner arc returns from the sector end angle to its start angle.
-    for (int i = arcSegments; i >= 0; --i)
+    for (int i = 0; i <= arcSegments; ++i)
     {
-        const float proportion = static_cast<float>(i) / static_cast<float>(arcSegments);
-        const float angle = startInner + (endInner - startInner) * proportion;
+        const float t = static_cast<float>(i) / static_cast<float>(arcSegments);
+        const float angle = innerEnd + (innerStart - innerEnd) * t;
         path.lineTo(centre.x + std::cos(angle) * inner,
                     centre.y - std::sin(angle) * inner);
     }
@@ -117,56 +156,99 @@ void OrchestraLayoutComponent::paint(juce::Graphics& g)
 {
     g.fillAll(backgroundColour);
 
-    // Fill first, then draw all outlines. This keeps adjacent non-gap edges
-    // coincident and visually single rather than creating artificial seams.
-    for (std::size_t i = 0; i < sectorPaths.size(); ++i)
+    for (const auto& path : sectorPaths)
     {
-        const int index = static_cast<int>(i);
-        const auto colour = index == selectedIndex ? selectedColour
-                          : index == hoveredIndex ? hoverColour : fillColour;
+        g.setColour(fillColour);
+        g.fillPath(path);
+    }
+    const juce::PathStrokeType outline(2.0f, juce::PathStrokeType::curved,
+                                       juce::PathStrokeType::rounded);
+    for (const auto& path : sectorPaths)
+    {
+        g.setColour(outlineColour);
+        g.strokePath(path, outline);
+    }
+
+    auto drawState = [this, &g](int index, juce::Colour colour, float thickness)
+    {
+        if (index < 0 || index >= static_cast<int>(sectorPaths.size()))
+            return;
         g.setColour(colour);
-        g.fillPath(sectorPaths[i]);
-    }
+        g.fillPath(sectorPaths[static_cast<std::size_t>(index)]);
+        g.setColour(selectedOutline);
+        g.strokePath(sectorPaths[static_cast<std::size_t>(index)],
+                     juce::PathStrokeType(thickness, juce::PathStrokeType::curved,
+                                          juce::PathStrokeType::rounded));
+    };
+    if (hoveredIndex >= 0 && hoveredIndex != selectedIndex)
+        drawState(hoveredIndex, hoverColour, 2.0f);
+    if (selectedIndex >= 0)
+        drawState(selectedIndex, selectedColour, 2.5f);
 
-    for (std::size_t i = 0; i < sectorPaths.size(); ++i)
-    {
-        const int index = static_cast<int>(i);
-        const bool selected = index == selectedIndex;
-        g.setColour(selected ? selectedOutline : outlineColour);
-        g.strokePath(sectorPaths[i],
-            juce::PathStrokeType(selected ? 2.5f : 2.0f,
-                                 juce::PathStrokeType::curved,
-                                 juce::PathStrokeType::rounded));
-    }
-
-    const float scale = juce::jmin(static_cast<float>(getWidth()) / kDesignUnitsAt1200,
-        static_cast<float>(getHeight()) / 388.0f);
+    const float scale = getLayoutScale();
     const juce::Point<float> centre(getWidth() * 0.5f, static_cast<float>(getHeight()));
-
-    g.setColour(labelColour);
-    g.setFont(juce::Font(juce::FontOptions(14.0f).withName("Inter")));
-
-    for (const auto& sector : sectors)
+    for (std::size_t i = 0; i < sectors.size(); ++i)
     {
-        const float midAngle = toRadians((sector.fromDegrees + sector.toDegrees) * 0.5f);
-        const float midRadius = (sector.innerRadius + sector.outerRadius) * 0.5f;
-        const float radius = midRadius * scale;
-        const float x = centre.x + std::cos(midAngle) * radius;
-        const float y = centre.y - std::sin(midAngle) * radius;
-
+        const auto& sector = sectors[i];
+        const float midAngle = radians((sector.fromDegrees + sector.toDegrees) * 0.5f);
+        const float radius = (sector.innerRadius + sector.outerRadius) * 0.5f * scale;
+        const juce::Point<float> anchor(centre.x + std::cos(midAngle) * radius,
+                                        centre.y - std::sin(midAngle) * radius);
         const float angularWidth = std::abs(sector.fromDegrees - sector.toDegrees);
-        const float availableWidth = juce::jmax(44.0f,
-            2.0f * radius * std::sin(toRadians(angularWidth * 0.5f)) - 8.0f);
-        const float boxWidth = juce::jmin(availableWidth, 190.0f * scale);
-        const int lines = sector.label.retainCharacters("\n").length() + 1;
-        const float boxHeight = juce::jmax(20.0f, static_cast<float>(lines) * 17.0f);
+        const float localWidth = juce::jmax(30.0f,
+            2.0f * radius * std::sin(radians(angularWidth * 0.5f)) - 8.0f);
+        const int lineCount = sector.label.contains("\n") ? 2 : 1;
+        float fontSize = currentLayout == Layout::Standard ? 12.0f : 12.0f;
+        auto font = makeLabelFont(fontSize, static_cast<int>(i) == selectedIndex);
+        auto widthOf = [&font](const juce::String& line)
+        {
+            juce::GlyphArrangement glyphs;
+            glyphs.addLineOfText(font, line, 0.0f, 0.0f);
+            return juce::jmax(static_cast<float>(font.getStringWidth(line)),
+                              glyphs.getBoundingBox(0, -1, true).getWidth());
+        };
+        juce::String lines[2] { sector.label.upToFirstOccurrenceOf("\n", false, false),
+                                sector.label.fromFirstOccurrenceOf("\n", false, false) };
+        auto widest = [&]()
+        {
+            float width = widthOf(lines[0]);
+            if (lineCount == 2) width = juce::jmax(width, widthOf(lines[1]));
+            return width;
+        };
+        while (widest() > localWidth && fontSize > 9.0f)
+        {
+            fontSize = juce::jmax(9.0f, fontSize - 0.5f);
+            font = makeLabelFont(fontSize, static_cast<int>(i) == selectedIndex);
+        }
+        const float lineHeight = font.getHeight();
+        const float boxHeight = lineHeight * static_cast<float>(lineCount);
+        juce::Rectangle<float> box(anchor.x - localWidth * 0.5f,
+                                   anchor.y - boxHeight * 0.5f,
+                                   localWidth, boxHeight);
+        const auto& path = sectorPaths[i];
+        auto cornersInside = [&]()
+        {
+            return path.contains(box.getTopLeft()) && path.contains(box.getTopRight())
+                && path.contains(box.getBottomLeft()) && path.contains(box.getBottomRight());
+        };
+        while (!cornersInside() && fontSize > 9.0f)
+        {
+            fontSize = juce::jmax(9.0f, fontSize - 0.5f);
+            font = makeLabelFont(fontSize, static_cast<int>(i) == selectedIndex);
+            const float h = font.getHeight() * static_cast<float>(lineCount);
+            box.setY(anchor.y - h * 0.5f);
+            box.setHeight(h);
+        }
+        if (!cornersInside())
+            juce::Logger::writeToLog("Orchestra label bounds outside sector: " + sector.name);
 
-        g.drawFittedText(sector.label,
-            juce::Rectangle<int>(juce::roundToInt(x - boxWidth * 0.5f),
-                                 juce::roundToInt(y - boxHeight * 0.5f),
-                                 juce::roundToInt(boxWidth),
-                                 juce::roundToInt(boxHeight)),
-            juce::Justification::centred, lines, 1.0f);
+        g.setColour(labelColour);
+        g.setFont(font);
+        g.drawText(lines[0], box.getX(), box.getY(), box.getWidth(), lineHeight,
+                   juce::Justification::centred, false);
+        if (lineCount == 2)
+            g.drawText(lines[1], box.getX(), box.getY() + lineHeight, box.getWidth(),
+                       lineHeight, juce::Justification::centred, false);
     }
 }
 
@@ -181,51 +263,48 @@ int OrchestraLayoutComponent::findSectorAt(juce::Point<float> point) const
 void OrchestraLayoutComponent::updateHover(juce::Point<float> point)
 {
     const int next = findSectorAt(point);
-    if (next != hoveredIndex)
-    {
-        hoveredIndex = next;
-        repaint();
-    }
+    if (next != hoveredIndex) { hoveredIndex = next; repaint(); }
 }
 
-void OrchestraLayoutComponent::mouseMove(const juce::MouseEvent& event)
-{
-    updateHover(event.position);
-}
-
-void OrchestraLayoutComponent::mouseExit(const juce::MouseEvent&)
-{
-    if (hoveredIndex != -1)
-    {
-        hoveredIndex = -1;
-        repaint();
-    }
-}
+void OrchestraLayoutComponent::mouseMove(const juce::MouseEvent& event) { updateHover(event.position); }
+void OrchestraLayoutComponent::mouseExit(const juce::MouseEvent&) { if (hoveredIndex != -1) { hoveredIndex = -1; repaint(); } }
 
 void OrchestraLayoutComponent::mouseDown(const juce::MouseEvent& event)
 {
     const int index = findSectorAt(event.position);
-    if (index < 0)
-        return;
-
+    if (index < 0) return;
     selectedIndex = index;
     hoveredIndex = index;
     repaint();
+    if (onSelectionChanged) onSelectionChanged(getSelectedParameterName());
+}
 
-    if (onSelectionChanged)
-        onSelectionChanged(sectors[static_cast<std::size_t>(index)].name);
+void OrchestraLayoutComponent::setLayout(Layout layout, bool notify)
+{
+    if (layout == currentLayout) return;
+    const auto previousSelection = getSelectedParameterName();
+    currentLayout = layout;
+    hoveredIndex = -1;
+    rebuildSectors();
+    int match = -1;
+    for (std::size_t i = 0; i < sectors.size(); ++i)
+        if (sectors[i].parameterName == previousSelection) { match = static_cast<int>(i); break; }
+    if (match >= 0) selectedIndex = match;
+    resized();
+    repaint();
+    if (notify && onLayoutChanged) onLayoutChanged(currentLayout);
+    if (notify && onSelectionChanged) onSelectionChanged(getSelectedParameterName());
 }
 
 void OrchestraLayoutComponent::setSelectedSection(const juce::String& name, bool notify)
 {
     for (std::size_t i = 0; i < sectors.size(); ++i)
     {
-        if (sectors[i].name == name)
+        if (sectors[i].parameterName == name || sectors[i].name == name)
         {
             selectedIndex = static_cast<int>(i);
             repaint();
-            if (notify && onSelectionChanged)
-                onSelectionChanged(sectors[i].name);
+            if (notify && onSelectionChanged) onSelectionChanged(getSelectedParameterName());
             return;
         }
     }
@@ -235,4 +314,10 @@ juce::String OrchestraLayoutComponent::getSelectedSection() const
 {
     return selectedIndex >= 0 && selectedIndex < static_cast<int>(sectors.size())
         ? sectors[static_cast<std::size_t>(selectedIndex)].name : juce::String{};
+}
+
+juce::String OrchestraLayoutComponent::getSelectedParameterName() const
+{
+    return selectedIndex >= 0 && selectedIndex < static_cast<int>(sectors.size())
+        ? sectors[static_cast<std::size_t>(selectedIndex)].parameterName : juce::String{};
 }
