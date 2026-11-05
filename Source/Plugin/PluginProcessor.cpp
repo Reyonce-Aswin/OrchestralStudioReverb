@@ -72,6 +72,8 @@ OrchestralStudioReverbAudioProcessor::createParameterLayout()
 
     layout.add(std::make_unique<AudioParameterBool>(ParameterID { "eqBypass", 1 },
         "EQ Bypass", false));
+    layout.add(std::make_unique<AudioParameterFloat>(ParameterID { "eqMix", 1 },
+        "EQ Mix", NormalisableRange<float>(0.0f, 1.0f, 0.001f), 1.0f, "%"));
 
     layout.add(std::make_unique<AudioParameterChoice>(
         ParameterID { "stagePosition", 1 }, "Stage Position", stageNames, 3));
@@ -89,9 +91,11 @@ void OrchestralStudioReverbAudioProcessor::prepareToPlay(double sampleRate, int 
     drySmoother.reset(sampleRate, 0.03);
     wetSmoother.reset(sampleRate, 0.03);
     earlySmoother.reset(sampleRate, 0.03);
+    eqMixSmoother.reset(sampleRate, 0.03);
     drySmoother.setCurrentAndTargetValue(parameters.getRawParameterValue("dry")->load());
     wetSmoother.setCurrentAndTargetValue(parameters.getRawParameterValue("wet")->load());
     earlySmoother.setCurrentAndTargetValue(parameters.getRawParameterValue("early")->load());
+    eqMixSmoother.setCurrentAndTargetValue(parameters.getRawParameterValue("eqMix")->load());
 }
 
 void OrchestralStudioReverbAudioProcessor::releaseResources()
@@ -183,6 +187,7 @@ void OrchestralStudioReverbAudioProcessor::processBlock(juce::AudioBuffer<float>
     drySmoother.setTargetValue(parameters.getRawParameterValue("dry")->load());
     wetSmoother.setTargetValue(parameters.getRawParameterValue("wet")->load());
     earlySmoother.setTargetValue(parameters.getRawParameterValue("early")->load());
+    eqMixSmoother.setTargetValue(parameters.getRawParameterValue("eqMix")->load());
 
     auto* left = buffer.getWritePointer(0);
     auto* right = channels > 1 ? buffer.getWritePointer(1) : nullptr;
@@ -199,7 +204,12 @@ void OrchestralStudioReverbAudioProcessor::processBlock(juce::AudioBuffer<float>
         const float earlyGain = earlySmoother.getNextValue();
         float wetL = lateGain * lateL + earlyGain * earlyL;
         float wetR = lateGain * lateR + earlyGain * earlyR;
+        const float unprocessedWetL = wetL;
+        const float unprocessedWetR = wetR;
         parametricEQ.processSample(wetL, wetR);
+        const float eqMix = eqMixSmoother.getNextValue();
+        wetL = unprocessedWetL + (wetL - unprocessedWetL) * eqMix;
+        wetR = unprocessedWetR + (wetR - unprocessedWetR) * eqMix;
         left[i] = dryGain * dryL + wetL;
         if (right != nullptr)
             right[i] = dryGain * dryR + wetR;
