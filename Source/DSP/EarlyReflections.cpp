@@ -38,10 +38,10 @@ constexpr std::array<StageProfile, 19> kStageProfiles{{
     { -0.18f, 0.60f, 0.98f }, // Oboes
     {  0.16f, 0.64f, 0.98f }, // Clarinets
     {  0.52f, 0.69f, 0.96f }, // Bassoons
-    { -0.66f, 0.90f, 0.90f }, // Harp & Celeste
-    {  0.00f, 1.00f, 0.88f }, // Timpani & Untuned Percussion
-    {  0.68f, 0.96f, 0.88f }, // Tuned Percussion
     { -0.82f, 1.00f, 0.86f }, // Horns
+    { -0.66f, 0.90f, 0.90f }, // Harp / Celeste
+    {  0.00f, 1.00f, 0.88f }, // Timpani / Untuned Percussion
+    {  0.68f, 0.96f, 0.88f }, // Tubular bells / mallets
     {  0.28f, 1.02f, 0.84f }, // Trumpets
     {  0.42f, 1.06f, 0.82f }, // Tenor Trombones
     {  0.56f, 1.10f, 0.80f }, // Bass Trombones

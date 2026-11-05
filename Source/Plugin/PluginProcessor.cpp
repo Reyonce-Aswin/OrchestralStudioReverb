@@ -29,14 +29,16 @@ OrchestralStudioReverbAudioProcessor::createParameterLayout()
     layout.add(std::make_unique<AudioParameterFloat>(ParameterID { "wet", 1 }, "Wet",
         NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.35f));
 
+    // Keep this order identical to OrchestraLayoutComponent's 19 sectors.
     const StringArray stageNames {
         "Piano", "Violin I", "Violin II", "Violas", "Celli", "Basses",
-        "Piccolos", "Flutes", "Oboes", "Clarinets", "Bassoons",
-        "Harp & Celeste", "Timpani & Untuned Percussion", "Tuned Percussion",
-        "Horns", "Trumpets", "Tenor Trombones", "Bass Trombones", "Tuba"
+        "Piccolos", "Flutes", "Oboes", "Clarinets", "Bassoons", "Horns",
+        "Harp / Celeste", "Timpani / Untuned Percussion",
+        "Tubular Bells / Marimba, Xylo, Glockenspiel",
+        "Trumpets", "Tenor Trombones", "Bass Trombones", "Tuba"
     };
     layout.add(std::make_unique<AudioParameterChoice>(
-        ParameterID { "stagePosition", 1 }, "Stage Position", stageNames, 1));
+        ParameterID { "stagePosition", 1 }, "Stage Position", stageNames, 3));
     return layout;
 }
 

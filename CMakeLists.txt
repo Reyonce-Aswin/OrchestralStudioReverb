@@ -67,8 +67,9 @@ if(OSR_BUILD_VST3)
         target_sources(OrchestralStudioReverb PRIVATE
             Source/Plugin/PluginProcessor.cpp
             Source/Plugin/PluginEditor.cpp
+            Source/UI/OrchestraLayoutComponent.cpp
         )
-        target_include_directories(OrchestralStudioReverb PRIVATE Source Source/DSP)
+        target_include_directories(OrchestralStudioReverb PRIVATE Source Source/DSP Source/UI)
         target_compile_definitions(OrchestralStudioReverb PRIVATE
             JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0
         )
