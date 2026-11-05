@@ -66,7 +66,9 @@ void OSRControlLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, in
     g.setColour(knobValue);
     g.strokePath(value, arcStroke);
 
-    const juce::Point<float> pointer(std::cos(angle), std::sin(angle));
+    // JUCE rotary angles use 0 at 12 o'clock and increase clockwise.
+    // Keep the pointer on the same angular convention as addCentredArc().
+    const juce::Point<float> pointer(std::sin(angle), -std::cos(angle));
     g.setColour(juce::Colours::white);
     g.drawLine(cx + pointer.x * radius * 0.35f, cy + pointer.y * radius * 0.35f,
                cx + pointer.x * radius * 0.88f, cy + pointer.y * radius * 0.88f, 2.0f);
