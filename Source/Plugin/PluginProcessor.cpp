@@ -31,7 +31,7 @@ OrchestralStudioReverbAudioProcessor::createParameterLayout()
 
     // Keep this order identical to OrchestraLayoutComponent's 19 sectors.
     const StringArray stageNames {
-        "Piano", "Violin I", "Violin II", "Violas", "Celli", "Basses",
+        "Piano", "Violins I", "Violins II", "Violas", "Celli", "Basses",
         "Piccolos", "Flutes", "Oboes", "Clarinets", "Bassoons", "Horns",
         "Harp / Celeste", "Percussion", "Tuned Percussion",
         "Trumpets", "Tenor Trombones", "Bass Trombones", "Tuba"
