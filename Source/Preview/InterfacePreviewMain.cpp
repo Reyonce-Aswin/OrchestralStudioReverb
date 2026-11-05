@@ -152,7 +152,8 @@ private:
   auto edgeAngle=[&](float base,float radius,bool startEdge,bool gap)
   {
    if(!gap)return juce::degreesToRadians(base);
-   const float inset=5.0f*1.6f*scale;\n   const float delta=std::asin(juce::jlimit(0.0f,0.99f,inset/juce::jmax(1.0f,radius)));
+   const float inset=5.0f*1.6f*scale;
+   const float delta=std::asin(juce::jlimit(0.0f,0.99f,inset/juce::jmax(1.0f,radius)));
    return juce::degreesToRadians(base)+(startEdge?-delta:delta);
   };
   juce::Path p;
