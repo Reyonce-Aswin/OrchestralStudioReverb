@@ -1,35 +1,10 @@
 #pragma once
 #include <juce_audio_utils/juce_audio_utils.h>
-#include <functional>
-#include <vector>
 #include "PluginProcessor.h"
+#include "../UI/OrchestraLayoutComponent.h"
 
-class OrchestraStageMap final : public juce::Component
-{
-public:
-    OrchestraStageMap();
-    void paint(juce::Graphics&) override;
-    void mouseDown(const juce::MouseEvent&) override;
-    void setSelectedSection(int section, bool notify = false);
-    std::function<void(int)> onSelectionChanged;
-
-private:
-    struct Sector
-    {
-        juce::String name;
-        float startDegrees = 0.0f;
-        float endDegrees = 0.0f;
-        float innerRadius = 0.0f;
-        float outerRadius = 0.0f;
-        int family = 0;
-    };
-
-    juce::Path makeSector(const Sector&, juce::Point<float> centre, float baseline) const;
-    std::vector<Sector> sectors;
-    int selectedSection = 0;
-};
-
-class OrchestralStudioReverbAudioProcessorEditor final : public juce::AudioProcessorEditor
+class OrchestralStudioReverbAudioProcessorEditor final : public juce::AudioProcessorEditor,
+                                                          private juce::Timer
 {
 public:
     explicit OrchestralStudioReverbAudioProcessorEditor(OrchestralStudioReverbAudioProcessor&);
@@ -37,11 +12,17 @@ public:
     void resized() override;
 
 private:
+    void timerCallback() override;
+    void syncStageSelectionFromHost();
+    void updateValueLabels();
+
     OrchestralStudioReverbAudioProcessor& processor;
-    OrchestraStageMap stageMap;
+    OrchestraLayoutComponent stageMap;
     juce::Slider decay, damping, roomSize, preDelay, early, dry, wet;
     juce::Label title, presetLabel, decayLabel, dampingLabel, roomSizeLabel, preDelayLabel;
     juce::Label earlyLabel, dryLabel, wetLabel, stagePositionLabel;
+    juce::Label roomSizeValue, preDelayValue, decayValue, dampingValue;
+    juce::Label earlyValue, dryValue, wetValue;
     using Attachment = juce::AudioProcessorValueTreeState::SliderAttachment;
     std::unique_ptr<Attachment> decayAttachment, dampingAttachment, roomSizeAttachment;
     std::unique_ptr<Attachment> preDelayAttachment, earlyAttachment, dryAttachment, wetAttachment;

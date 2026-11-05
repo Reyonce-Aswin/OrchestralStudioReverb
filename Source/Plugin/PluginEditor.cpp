@@ -1,165 +1,14 @@
 #include "PluginEditor.h"
 #include <cmath>
-#include <vector>
-#include <functional>
 
 namespace
 {
 const juce::Colour background { 25, 27, 34 };
 const juce::Colour panel { 34, 37, 47 };
-const juce::Colour border { 78, 82, 96 };
+const juce::Colour border { 126, 131, 148 };
 const juce::Colour text { 226, 228, 237 };
 const juce::Colour muted { 157, 162, 179 };
-const juce::Colour accent { 184, 184, 218 };
-
-juce::Colour familyColour(int family)
-{
-    switch (family)
-    {
-        case 1: return juce::Colour(66, 91, 112);
-        case 2: return juce::Colour(67, 91, 82);
-        case 3: return juce::Colour(91, 75, 91);
-        case 4: return juce::Colour(102, 91, 68);
-        default: return juce::Colour(75, 72, 91);
-    }
-}
-}
-
-OrchestraStageMap::OrchestraStageMap()
-{
-    sectors = {
-        { "Piano", 0.0f, 180.0f, 0.0f, 0.0f, 0 },
-        { "Violin I", 145.0f, 180.0f, 0.0f, 0.0f, 2 },
-        { "Violin II", 112.0f, 145.0f, 0.0f, 0.0f, 2 },
-        { "Violas", 78.0f, 112.0f, 0.0f, 0.0f, 2 },
-        { "Celli", 43.0f, 78.0f, 0.0f, 0.0f, 2 },
-        { "Basses", 0.0f, 43.0f, 0.0f, 0.0f, 2 },
-        { "Piccolos", 145.0f, 180.0f, 0.0f, 0.0f, 1 },
-        { "Flutes", 116.0f, 145.0f, 0.0f, 0.0f, 1 },
-        { "Oboes", 87.0f, 116.0f, 0.0f, 0.0f, 1 },
-        { "Clarinets", 58.0f, 87.0f, 0.0f, 0.0f, 1 },
-        { "Bassoons", 29.0f, 58.0f, 0.0f, 0.0f, 1 },
-        { "Harp & Celeste", 120.0f, 155.0f, 0.0f, 0.0f, 4 },
-        { "Timpani & Untuned Percussion", 65.0f, 115.0f, 0.0f, 0.0f, 4 },
-        { "Tuned Percussion", 25.0f, 60.0f, 0.0f, 0.0f, 4 },
-        { "Horns", 155.0f, 180.0f, 0.0f, 0.0f, 3 },
-        { "Trumpets", 0.0f, 22.5f, 0.0f, 0.0f, 3 },
-        { "Tenor Trombones", 22.5f, 45.0f, 0.0f, 0.0f, 3 },
-        { "Bass Trombones", 45.0f, 67.5f, 0.0f, 0.0f, 3 },
-        { "Tuba", 67.5f, 90.0f, 0.0f, 0.0f, 3 }
-    };
-}
-
-juce::Path OrchestraStageMap::makeSector(const Sector& sector,
-                                          juce::Point<float> centre,
-                                          float baseline) const
-{
-    const float scale = juce::jmin(getWidth() / 900.0f, getHeight() / 360.0f);
-    float inner = 0.0f;
-    float outer = 70.0f * scale;
-
-    if (sector.family == 2) { inner = 78.0f * scale; outer = 133.0f * scale; }
-    if (sector.family == 1) { inner = 139.0f * scale; outer = 192.0f * scale; }
-    if (sector.family == 4) { inner = 198.0f * scale; outer = 247.0f * scale; }
-    if (sector.family == 3) { inner = 139.0f * scale; outer = 247.0f * scale; }
-
-    if (sector.family == 3 && sector.name == "Horns")
-        inner = 198.0f * scale;
-
-    juce::Path path;
-    const float step = (sector.endDegrees - sector.startDegrees) / 32.0f;
-    for (int i = 0; i <= 32; ++i)
-    {
-        const float a = juce::degreesToRadians(
-            sector.startDegrees + step * static_cast<float>(i));
-        const juce::Point<float> point(centre.x + std::cos(a) * outer,
-                                        baseline - std::sin(a) * outer);
-        if (i == 0) path.startNewSubPath(point);
-        else path.lineTo(point);
-    }
-
-    if (inner > 0.0f)
-    {
-        for (int i = 32; i >= 0; --i)
-        {
-            const float a = juce::degreesToRadians(
-                sector.startDegrees + step * static_cast<float>(i));
-            path.lineTo(centre.x + std::cos(a) * inner,
-                        baseline - std::sin(a) * inner);
-        }
-    }
-    else
-    {
-        path.lineTo(centre.x, baseline);
-    }
-    path.closeSubPath();
-    return path;
-}
-
-void OrchestraStageMap::paint(juce::Graphics& g)
-{
-    g.fillAll(panel);
-    const auto centre = juce::Point<float>(getWidth() * 0.5f, getHeight() - 12.0f);
-    const float baseline = getHeight() - 12.0f;
-    const float scale = juce::jmin(getWidth() / 900.0f, getHeight() / 360.0f);
-
-    for (int i = 0; i < static_cast<int>(sectors.size()); ++i)
-    {
-        const auto& sector = sectors[static_cast<size_t>(i)];
-        const auto path = makeSector(sector, centre, baseline);
-        g.setColour(i == selectedSection ? accent.withAlpha(0.82f)
-                                          : familyColour(sector.family).withAlpha(0.42f));
-        g.fillPath(path);
-        g.setColour(i == selectedSection ? accent : border);
-        g.strokePath(path, juce::PathStrokeType(i == selectedSection ? 2.0f : 1.0f));
-
-        if (sector.name != "Piano")
-        {
-            const float mid = (sector.startDegrees + sector.endDegrees) * 0.5f;
-            float radius = sector.family == 2 ? 105.0f : sector.family == 1 ? 165.0f
-                         : sector.family == 4 ? 222.0f : 222.0f;
-            const float a = juce::degreesToRadians(mid);
-            const float x = centre.x + std::cos(a) * radius * scale;
-            const float y = baseline - std::sin(a) * radius * scale;
-            auto label = sector.name;
-            if (label == "Timpani & Untuned Percussion") label = "TIMPANI / PERC.";
-            if (label == "Harp & Celeste") label = "HARP / CELESTE";
-            if (label == "Tuned Percussion") label = "TUBULAR BELLS / MALLETS";
-            g.setColour(text);
-            const float labelScale = sector.family == 3 ? 0.82f : 1.0f;
-            g.setFont(juce::Font(juce::FontOptions(juce::jmax(9.0f, 11.0f * scale * labelScale))));
-            g.drawFittedText(label, juce::Rectangle<int>(static_cast<int>(x - 62.0f * scale),
-                static_cast<int>(y - 14.0f * scale), static_cast<int>(124.0f * scale),
-                static_cast<int>(28.0f * scale)), juce::Justification::centred, 1);
-        }
-    }
-
-    g.setColour(text);
-    g.setFont(juce::Font(juce::FontOptions(11.0f)));
-    g.drawText("PIANO", juce::Rectangle<int>(getWidth() / 2 - 42, getHeight() - 55, 84, 18),
-               juce::Justification::centred);
-}
-
-void OrchestraStageMap::mouseDown(const juce::MouseEvent& event)
-{
-    const auto centre = juce::Point<float>(getWidth() * 0.5f, getHeight() - 12.0f);
-    const float baseline = getHeight() - 12.0f;
-    for (int i = static_cast<int>(sectors.size()) - 1; i >= 0; --i)
-    {
-        if (makeSector(sectors[static_cast<size_t>(i)], centre, baseline).contains(event.position))
-        {
-            setSelectedSection(i, true);
-            return;
-        }
-    }
-}
-
-void OrchestraStageMap::setSelectedSection(int section, bool notify)
-{
-    selectedSection = juce::jlimit(0, static_cast<int>(sectors.size()) - 1, section);
-    repaint();
-    if (notify && onSelectionChanged)
-        onSelectionChanged(selectedSection);
+const juce::Colour accent { 210, 212, 226 };
 }
 
 OrchestralStudioReverbAudioProcessorEditor::OrchestralStudioReverbAudioProcessorEditor(
@@ -180,34 +29,40 @@ OrchestralStudioReverbAudioProcessorEditor::OrchestralStudioReverbAudioProcessor
     stagePositionLabel.setText("STAGE POSITION", juce::dontSendNotification);
     stagePositionLabel.setColour(juce::Label::textColourId, muted);
     stagePositionLabel.setFont(juce::Font(juce::FontOptions(11.0f)));
+    stagePositionLabel.setJustificationType(juce::Justification::centredRight);
     addAndMakeVisible(stagePositionLabel);
     addAndMakeVisible(stageMap);
 
     const auto setupSlider = [this](juce::Slider& slider, juce::Label& label,
-                                    const juce::String& name)
+                                    juce::Label& valueLabel, const juce::String& name)
     {
         slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-        slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 68, 18);
+        slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
         slider.setColour(juce::Slider::rotarySliderFillColourId, accent);
         slider.setColour(juce::Slider::rotarySliderOutlineColourId, border);
         slider.setColour(juce::Slider::thumbColourId, text);
-        slider.setColour(juce::Slider::textBoxTextColourId, muted);
-        slider.setColour(juce::Slider::textBoxBackgroundColourId, background);
+
         label.setText(name, juce::dontSendNotification);
         label.setJustificationType(juce::Justification::centred);
         label.setColour(juce::Label::textColourId, text);
         label.setFont(juce::Font(juce::FontOptions(10.0f)));
+
+        valueLabel.setJustificationType(juce::Justification::centred);
+        valueLabel.setColour(juce::Label::textColourId, muted);
+        valueLabel.setFont(juce::Font(juce::FontOptions(12.0f)));
+
         addAndMakeVisible(slider);
         addAndMakeVisible(label);
+        addAndMakeVisible(valueLabel);
     };
 
-    setupSlider(roomSize, roomSizeLabel, "ROOM SIZE");
-    setupSlider(preDelay, preDelayLabel, "PRE-DELAY");
-    setupSlider(decay, decayLabel, "DECAY");
-    setupSlider(damping, dampingLabel, "DAMPING");
-    setupSlider(early, earlyLabel, "EARLY LEVEL");
-    setupSlider(dry, dryLabel, "DRY");
-    setupSlider(wet, wetLabel, "LATE WET");
+    setupSlider(roomSize, roomSizeLabel, roomSizeValue, "ROOM SIZE");
+    setupSlider(preDelay, preDelayLabel, preDelayValue, "PRE-DELAY");
+    setupSlider(decay, decayLabel, decayValue, "DECAY");
+    setupSlider(damping, dampingLabel, dampingValue, "DAMPING");
+    setupSlider(early, earlyLabel, earlyValue, "EARLY LEVEL");
+    setupSlider(dry, dryLabel, dryValue, "DRY");
+    setupSlider(wet, wetLabel, wetValue, "LATE WET");
 
     auto& state = processor.getParameters();
     decayAttachment = std::make_unique<Attachment>(state, "decay", decay);
@@ -218,48 +73,121 @@ OrchestralStudioReverbAudioProcessorEditor::OrchestralStudioReverbAudioProcessor
     dryAttachment = std::make_unique<Attachment>(state, "dry", dry);
     wetAttachment = std::make_unique<Attachment>(state, "wet", wet);
 
-    if (auto* stage = state.getParameter("stagePosition"))
-        stageMap.setSelectedSection(static_cast<int>(stage->convertFrom0to1(stage->getValue())));
+    const auto refreshValues = [this] { updateValueLabels(); };
+    roomSize.onValueChange = refreshValues;
+    preDelay.onValueChange = refreshValues;
+    decay.onValueChange = refreshValues;
+    damping.onValueChange = refreshValues;
+    early.onValueChange = refreshValues;
+    dry.onValueChange = refreshValues;
+    wet.onValueChange = refreshValues;
+    updateValueLabels();
 
-    stageMap.onSelectionChanged = [this](int section)
+    stageMap.onSelectionChanged = [this](const juce::String& sectionName)
     {
         if (auto* parameter = processor.getParameters().getParameter("stagePosition"))
-            parameter->setValueNotifyingHost(parameter->convertTo0to1(static_cast<float>(section)));
+        {
+            if (auto* choice = dynamic_cast<juce::AudioParameterChoice*>(parameter))
+            {
+                const int index = choice->choices.indexOf(sectionName);
+                if (index >= 0)
+                    parameter->setValueNotifyingHost(parameter->convertTo0to1(static_cast<float>(index)));
+            }
+        }
+        syncStageSelectionFromHost();
     };
 
-    setSize(1180, 760);
+    syncStageSelectionFromHost();
+    startTimerHz(20);
+    setResizable(true, true);
+    setResizeLimits(850, 620, 1400, 1000);
+    setSize(1000, 700);
+}
+
+void OrchestralStudioReverbAudioProcessorEditor::updateValueLabels()
+{
+    roomSizeValue.setText(juce::String(roomSize.getValue(), 2) + "×",
+                          juce::dontSendNotification);
+    preDelayValue.setText(juce::String(preDelay.getValue(), 1) + " ms",
+                          juce::dontSendNotification);
+    decayValue.setText(juce::String(decay.getValue(), 2) + " s",
+                       juce::dontSendNotification);
+
+    const double dampingHz = damping.getValue();
+    dampingValue.setText(dampingHz >= 1000.0
+        ? juce::String(dampingHz / 1000.0, 2) + " kHz"
+        : juce::String(dampingHz, 0) + " Hz", juce::dontSendNotification);
+
+    earlyValue.setText(juce::String(early.getValue() * 100.0, 1) + "%",
+                       juce::dontSendNotification);
+    dryValue.setText(juce::String(dry.getValue() * 100.0, 1) + "%",
+                     juce::dontSendNotification);
+    wetValue.setText(juce::String(wet.getValue() * 100.0, 1) + "%",
+                     juce::dontSendNotification);
 }
 
 void OrchestralStudioReverbAudioProcessorEditor::paint(juce::Graphics& g)
 {
     g.fillAll(background);
     g.setColour(border);
-    g.drawLine(28.0f, 70.0f, static_cast<float>(getWidth() - 28), 70.0f, 1.0f);
-    g.drawLine(28.0f, 520.0f, static_cast<float>(getWidth() - 28), 520.0f, 1.0f);
+    const int sectionTop = 76;
+    const int controlsTop = getHeight() - 166;
+    g.drawLine(24.0f, 64.0f, static_cast<float>(getWidth() - 24), 64.0f, 1.0f);
+    g.drawLine(24.0f, static_cast<float>(controlsTop - 10),
+               static_cast<float>(getWidth() - 24), static_cast<float>(controlsTop - 10), 1.0f);
     g.setColour(muted);
-    g.setFont(11.0f);
-    g.drawText("SPACE", 30, 112, 100, 18, juce::Justification::centredLeft);
-    g.drawText("ORCHESTRA STAGE", 0, 100, getWidth(), 18, juce::Justification::centred);
-    g.drawText("REFLECTIONS", getWidth() - 150, 112, 120, 18, juce::Justification::centredRight);
+    g.setFont(10.5f);
+    g.drawText("ORCHESTRA LAYOUT", 26, sectionTop, 220, 16, juce::Justification::centredLeft);
+    g.drawText("SPACE  /  EARLY REFLECTIONS", getWidth() - 280, sectionTop, 254, 16,
+               juce::Justification::centredRight);
 }
 
 void OrchestralStudioReverbAudioProcessorEditor::resized()
 {
-    title.setBounds(30, 20, 420, 34);
-    presetLabel.setBounds(getWidth() / 2 - 115, 20, 230, 34);
-    stagePositionLabel.setBounds(30, 490, 180, 20);
-    stageMap.setBounds(80, 128, getWidth() - 160, 350);
+    constexpr int margin = 26;
+    title.setBounds(margin, 16, 390, 34);
+    presetLabel.setBounds(getWidth() / 2 - 100, 16, 200, 34);
+    stagePositionLabel.setBounds(getWidth() - 300, 18, 274, 30);
 
-    const int y = 535;
+    const int controlsTop = getHeight() - 166;
+    const int mapTop = 96;
+    const int mapHeight = juce::jmax(220, controlsTop - mapTop - 14);
+    stageMap.setBounds(0, mapTop, getWidth(), mapHeight);
+
     const int count = 7;
-    const int width = (getWidth() - 60) / count;
+    const int availableWidth = getWidth() - margin * 2;
+    const int cellWidth = availableWidth / count;
     juce::Slider* sliders[] = { &roomSize, &preDelay, &decay, &damping, &early, &dry, &wet };
     juce::Label* labels[] = { &roomSizeLabel, &preDelayLabel, &decayLabel, &dampingLabel,
                               &earlyLabel, &dryLabel, &wetLabel };
+    juce::Label* values[] = { &roomSizeValue, &preDelayValue, &decayValue, &dampingValue,
+                              &earlyValue, &dryValue, &wetValue };
+
     for (int i = 0; i < count; ++i)
     {
-        const int x = 30 + i * width;
-        labels[i]->setBounds(x, y, width, 18);
-        sliders[i]->setBounds(x + (width - 100) / 2, y + 18, 100, 112);
+        const int x = margin + i * cellWidth;
+        labels[i]->setBounds(x, controlsTop + 3, cellWidth, 15);
+        const int dialWidth = juce::jmin(88, cellWidth - 8);
+        sliders[i]->setBounds(x + (cellWidth - dialWidth) / 2,
+                              controlsTop + 19, dialWidth, 88);
+        values[i]->setBounds(x, controlsTop + 107, cellWidth, 20);
     }
+}
+
+void OrchestralStudioReverbAudioProcessorEditor::syncStageSelectionFromHost()
+{
+    if (auto* parameter = processor.getParameters().getParameter("stagePosition"))
+    {
+        const auto name = parameter->getCurrentValueAsText();
+        if (stageMap.getSelectedSection() != name)
+            stageMap.setSelectedSection(name);
+
+        stagePositionLabel.setText("SELECTED: " + name.toUpperCase(),
+                                   juce::dontSendNotification);
+    }
+}
+
+void OrchestralStudioReverbAudioProcessorEditor::timerCallback()
+{
+    syncStageSelectionFromHost();
 }

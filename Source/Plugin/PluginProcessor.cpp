@@ -29,14 +29,15 @@ OrchestralStudioReverbAudioProcessor::createParameterLayout()
     layout.add(std::make_unique<AudioParameterFloat>(ParameterID { "wet", 1 }, "Wet",
         NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.35f));
 
+    // Keep this order identical to OrchestraLayoutComponent's 19 sectors.
     const StringArray stageNames {
-        "Piano", "Violin I", "Violin II", "Violas", "Celli", "Basses",
-        "Piccolos", "Flutes", "Oboes", "Clarinets", "Bassoons",
-        "Harp & Celeste", "Timpani & Untuned Percussion", "Tuned Percussion",
-        "Horns", "Trumpets", "Tenor Trombones", "Bass Trombones", "Tuba"
+        "Piano", "Violins I", "Violins II", "Violas", "Celli", "Basses",
+        "Piccolos", "Flutes", "Oboes", "Clarinets", "Bassoons", "Horns",
+        "Harp / Celeste", "Percussion", "Tuned Percussion",
+        "Trumpets", "Tenor Trombones", "Bass Trombones", "Tuba"
     };
     layout.add(std::make_unique<AudioParameterChoice>(
-        ParameterID { "stagePosition", 1 }, "Stage Position", stageNames, 1));
+        ParameterID { "stagePosition", 1 }, "Stage Position", stageNames, 3));
     return layout;
 }
 
@@ -75,18 +76,21 @@ void OrchestralStudioReverbAudioProcessor::processBlock(juce::AudioBuffer<float>
     if (channels == 0)
         return;
 
+    const int stageIndex = juce::roundToInt(
+        parameters.getRawParameterValue("stagePosition")->load());
+
     orchestral::dsp::FDNReverb::Parameters lateParameters;
     lateParameters.decaySeconds = parameters.getRawParameterValue("decay")->load();
     lateParameters.dampingHz = parameters.getRawParameterValue("damping")->load();
     lateParameters.inputGain = 0.45f;
     lateParameters.wetGain = 1.0f;
+    lateParameters.stagePosition = stageIndex;
     reverb.setParameters(lateParameters);
 
     orchestral::dsp::EarlyReflections::Parameters earlyParameters;
     earlyParameters.roomSize = parameters.getRawParameterValue("roomSize")->load();
     earlyParameters.preDelayMs = parameters.getRawParameterValue("preDelay")->load();
-    earlyParameters.stagePosition = juce::roundToInt(
-        parameters.getRawParameterValue("stagePosition")->load());
+    earlyParameters.stagePosition = stageIndex;
     earlyReflections.setParameters(earlyParameters);
 
     drySmoother.setTargetValue(parameters.getRawParameterValue("dry")->load());
@@ -102,13 +106,13 @@ void OrchestralStudioReverbAudioProcessor::processBlock(juce::AudioBuffer<float>
         float lateL = 0.0f, lateR = 0.0f, earlyL = 0.0f, earlyR = 0.0f;
         reverb.processSample(dryL, dryR, lateL, lateR);
         earlyReflections.processSample(dryL, dryR, earlyL, earlyR);
-        left[i] = drySmoother.getNextValue() * dryL
-                + wetSmoother.getNextValue() * lateL
-                + earlySmoother.getNextValue() * earlyL;
+
+        const float dryGain = drySmoother.getNextValue();
+        const float lateGain = wetSmoother.getNextValue();
+        const float earlyGain = earlySmoother.getNextValue();
+        left[i] = dryGain * dryL + lateGain * lateL + earlyGain * earlyL;
         if (right != nullptr)
-            right[i] = drySmoother.getCurrentValue() * dryR
-                     + wetSmoother.getCurrentValue() * lateR
-                     + earlySmoother.getCurrentValue() * earlyR;
+            right[i] = dryGain * dryR + lateGain * lateR + earlyGain * earlyR;
     }
 }
 
