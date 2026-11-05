@@ -60,23 +60,25 @@ public:
   g.setColour(muted); g.setFont(9); g.drawText("CONCERT SPACES FOR ORCHESTRAL MUSIC",26,37,350,15,juce::Justification::centredLeft);
   drawText(g,"PRESET",390,11,65,14,9,muted);
   rounded(g,{450,10,280,34},line,fill); drawText(g,presets[preset],462,10,245,34,13,ink);
-  drawText(g,"‹",744,9,28,34,22,ink); drawText(g,"›",778,9,28,34,22,ink);
-  drawText(g,"SAVE",826,12,46,28,10,muted); drawText(g,"⚙",920,12,30,28,18,muted);
+  rounded(g,{738,10,58,34},line,panel); drawText(g,"PREV",738,10,58,34,9,ink,juce::Justification::centred);
+  rounded(g,{800,10,58,34},line,panel); drawText(g,"NEXT",800,10,58,34,9,ink,juce::Justification::centred);
+  rounded(g,{866,10,58,34},line,panel); drawText(g,"SAVE",866,10,58,34,9,ink,juce::Justification::centred);
+  rounded(g,{930,10,42,34},line,panel); drawText(g,"MENU",930,10,42,34,8,ink,juce::Justification::centred);
   auto left=juce::Rectangle<float>(14,58,258,398), stage=juce::Rectangle<float>(284,58,702,398);
   rounded(g,left,line,panel); rounded(g,stage,line,panel);
-  drawText(g,"ORCHESTRA LAYOUT",28,70,210,20,10,ink);
-  rounded(g,{27,98,232,42},line,bg);
-  rounded(g,{layout==0?29.0f:144.0f,100,113,38},blue,selected);
-  drawText(g,"STANDARD",29,100,113,38,10,ink,juce::Justification::centred);
-  drawText(g,"CLASSICAL / EUROPEAN\n(ANTIPHONAL)",144,100,113,38,9,ink,juce::Justification::centred);
-  g.setColour(line); g.drawLine(28,154,258,154);
-  drawText(g,"ROOM",29,164,200,18,10,ink);
-  knob(g,90,222,"ROOM SIZE",juce::String("1.20 ")+juce::String::charToString(0x00D7)); knob(g,203,222,"PRE-DELAY","54 ms");
-  g.setColour(line); g.drawLine(28,282,258,282);
-  drawText(g,"REVERB TIME",29,291,200,18,10,ink);
-  knob(g,145,360,"DECAY","2.80 s");
-  drawText(g,layout==0?"STANDARD ORCHESTRA LAYOUT":"CLASSICAL / EUROPEAN (ANTIPHONAL) LAYOUT",302,69,450,18,10,ink);
-  drawText(g,juce::String("SELECTED: ")+selectedName.toUpperCase(),770,69,200,18,10,blue,juce::Justification::centredRight);
+  drawText(g,"ROOM & REVERB",28,70,210,20,10,ink);
+  g.setColour(line); g.drawLine(28,98,258,98);
+  drawText(g,"ROOM",29,108,200,18,10,ink);
+  knob(g,90,166,"ROOM SIZE",juce::String("1.20 ")+juce::String::charToString(0x00D7)); knob(g,203,166,"PRE-DELAY","54 ms");
+  g.setColour(line); g.drawLine(28,226,258,226);
+  drawText(g,"REVERB TIME",29,236,200,18,10,ink);
+  knob(g,145,305,"DECAY","2.80 s");
+  drawText(g,layout==0?"STANDARD ORCHESTRA LAYOUT":"CLASSICAL / EUROPEAN (ANTIPHONAL) LAYOUT",302,69,265,18,9,ink);
+  rounded(g,{574,64,112,28},line,layout==0?selected:bg);
+  drawText(g,"STANDARD",574,64,112,28,9,ink,juce::Justification::centred);
+  rounded(g,{692,64,164,28},line,layout==1?selected:bg);
+  drawText(g,"CLASSICAL / EUROPEAN",692,64,164,28,9,ink,juce::Justification::centred);
+  drawText(g,juce::String("SELECTED: ")+selectedName.toUpperCase(),860,69,110,18,8,blue,juce::Justification::centredRight);
   drawStage(g,stage.withTrimmedLeft(14).withTrimmedRight(14).withTrimmedTop(39).withTrimmedBottom(12));
   auto bottom=juce::Rectangle<float>(14,468,972,218); rounded(g,bottom,line,panel);
   drawSpacedHeading(g,"DECAY",34,480,110,16,10.0f,knobName);
@@ -102,8 +104,14 @@ public:
  void mouseDown(const juce::MouseEvent& e) override
  {
   auto p=e.position;
-  if(p.y>=98&&p.y<=140&&p.x>=27&&p.x<=259){layout=p.x<143?0:1; selectedName=layout==0?"Violas":"Violins II"; hoveredName.clear(); repaint(); return;}
-  if(p.y>=10&&p.y<=44&&p.x>=450&&p.x<=730){preset=(preset+1)%presets.size(); repaint(); return;}
+  if(p.y>=64&&p.y<=94&&p.x>=574&&p.x<=856)
+  {
+   layout=p.x<688?0:1;
+   selectedName=layout==0?"Violins I":"Violins II";
+   hoveredName.clear();repaint();return;
+  }
+  if(p.y>=10&&p.y<=44&&p.x>=800&&p.x<=858){preset=(preset+1)%presets.size();repaint();return;}
+  if(p.y>=10&&p.y<=44&&p.x>=738&&p.x<800){preset=(preset+presets.size()-1)%presets.size();repaint();return;}
   auto r=stageRect(); auto centre=juce::Point<float>(r.getCentreX(),r.getBottom()-1);
   if(!r.contains(p))return;
   if(layout==0){ for(const auto& s:standard) if(standardSectorPath(s,centre,r).contains(p)){selectedName=s.name;repaint();break;} }
@@ -188,18 +196,39 @@ private:
   const float delta=std::asin(juce::jlimit(0.0f,0.999f,5.0f/radius))*180.0f/pi;
   return degrees+(isStart?-delta:delta);
  }
- static juce::Path standardSectorPath(const StandardSector& s,juce::Point<float> c,juce::Rectangle<float> r)
+ static juce::Path standardSectorPath(const StandardSector& s,juce::Point<float> centre,juce::Rectangle<float> bounds)
  {
-  const float scale=standardScale(r),ri=s.inner*1.6f*scale,ro=s.outer*1.6f*scale;
-  const float so=juceAngle(shiftedEdge(s.from,ro,true,s.gapStart));
-  const float eo=juceAngle(shiftedEdge(s.to,ro,false,s.gapEnd));
-  const float si=juceAngle(shiftedEdge(s.from,ri,true,s.gapStart));
-  const float ei=juceAngle(shiftedEdge(s.to,ri,false,s.gapEnd));
-  juce::Path p;
-  p.addCentredArc(c.x,c.y,ro,ro,0.0f,so,eo,true);
-  p.lineTo(c.x+std::cos(ei)*ri,c.y+std::sin(ei)*ri);
-  p.addCentredArc(c.x,c.y,ri,ri,0.0f,ei,si,false);
-  p.closeSubPath(); return p;
+  const float scale=standardScale(bounds);
+  const float rOuter=s.outer*1.6f*scale,rInner=s.inner*1.6f*scale;
+  auto point=[&](float radius,float degrees)
+  {
+   const float angle=juce::degreesToRadians(degrees);
+   return juce::Point<float>(centre.x+radius*std::cos(angle),centre.y-radius*std::sin(angle));
+  };
+  auto gapShift=[](float gap,float radius)
+  {
+   return gap>0.0f?juce::radiansToDegrees(std::asin(juce::jlimit(0.0f,0.999f,gap/radius))):0.0f;
+  };
+  const float outerStart=s.from-gapShift(s.gapStart?5.0f:0.0f,rOuter);
+  const float outerEnd=s.to+gapShift(s.gapEnd?5.0f:0.0f,rOuter);
+  const float innerStart=s.from-gapShift(s.gapStart?5.0f:0.0f,rInner);
+  const float innerEnd=s.to+gapShift(s.gapEnd?5.0f:0.0f,rInner);
+  juce::Path path;
+  auto addArc=[&](float radius,float from,float to,bool first)
+  {
+   const int steps=juce::jmax(2,int(std::ceil(std::abs(from-to)/1.0f)));
+   for(int i=0;i<=steps;++i)
+   {
+    const float t=float(i)/float(steps);
+    const auto p=point(radius,from+(to-from)*t);
+    if(first&&i==0)path.startNewSubPath(p);else path.lineTo(p);
+   }
+  };
+  addArc(rOuter,outerStart,outerEnd,true);
+  path.lineTo(point(rInner,innerEnd));
+  addArc(rInner,innerEnd,innerStart,false);
+  path.closeSubPath();
+  return path;
  }
  juce::Font standardFont(float size) const
  {
