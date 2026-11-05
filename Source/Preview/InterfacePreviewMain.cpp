@@ -10,17 +10,27 @@ const juce::Colour line {0x42,0x49,0x5C}, ink {0xEE,0xF0,0xF7}, muted {0xAAB2C4}
 const juce::Colour blue {0x8D,0xB4,0xFF}, selected {0x25,0x34,0x5E};
 constexpr float pi=3.14159265358979323846f;
 struct Sector { const char* name; int ring; float from,to; const char* label; };
-const std::array<Sector,19> standard {{
- {"Piano",0,180,0,"PIANO"},{"Violins I",1,180,142,"VIOLINS I"},
- {"Violins II",1,142,90,"VIOLINS II"},{"Violas",1,90,40,"VIOLAS"},
- {"Celli",1,40,0,"CELLI"},{"Basses",2,150,118,"BASSES"},
- {"Piccolos",2,118,106,"PICCOLOS"},{"Flutes",2,106,94,"FLUTES"},
- {"Oboes",2,94,70,"OBOES"},{"Clarinets",2,70,58,"CLARINETS"},
- {"Bassoons",2,58,46,"BASSOONS"},{"Harp / Celeste",3,180,152,"HARP /\nCELESTE"},
- {"Horns",3,148,120,"HORNS"},{"Trumpets",3,120,98,"TRUMPETS"},
- {"Tenor Trombones",3,98,78,"TENOR\nTROMBONES"},{"Bass Trombones",3,78,60,"BASS\nTROMBONES"},
- {"Tuba",3,60,44,"TUBA"},{"Percussion",4,125,68,"TIMPANI /\nUNTUNED PERC"},
- {"Tuned Percussion",4,68,38,"TUBULAR BELLS /\nMALLETS"}
+struct StandardSector { const char* name; float inner, outer, from, to; bool gapStart, gapEnd; const char* label; };
+const std::array<StandardSector,19> standard {{
+ {"Piano",62,100,180,0,false,false,"PIANO"},
+ {"Violin I",108,253,180,142,false,true,"VIOLIN I"},
+ {"Violin II",110,192,142,90,true,false,"VIOLIN II"},
+ {"Violas",110,192,90,40,false,true,"VIOLAS"},
+ {"Celli",108,217,40,0,true,false,"CELLI"},
+ {"Basses",228,313,40,0,true,false,"BASSES"},
+ {"Piccolos",202,254,142,121,true,false,"PICCOLOS"},
+ {"Flutes",202,254,121,100,false,false,"FLUTES"},
+ {"Oboes",202,254,100,79,false,false,"OBOES"},
+ {"Clarinets",202,254,79,58,false,false,"CLARINETS"},
+ {"Bassoons",202,254,58,40,false,true,"BASSOONS"},
+ {"Horns",262,318,180,143,false,true,"HORNS"},
+ {"Harp / Celeste",262,318,143,111,true,false,"HARP / CELESTE"},
+ {"Percussion",262,318,111,69,false,false,"PERCUSSION"},
+ {"Tuned Percussion",262,318,69,40,false,true,"TUNED PERCUSSION"},
+ {"Trumpets",326,388,40,30,false,false,"TRUMPETS"},
+ {"Tenor Trombones",326,388,30,20,false,false,"TENOR TROMBONES"},
+ {"Bass Trombones",326,388,20,12,false,false,"BASS TROMBONES"},
+ {"Tuba",326,388,12,0,false,false,"TUBA"}
 }};
 const std::array<Sector,18> antiphonal {{
  {"Piano",0,180,0,"PIANO"},{"Violins I",1,180,140,"VIOLIN I"},
@@ -91,16 +101,22 @@ public:
   auto p=e.position;
   if(p.y>=98&&p.y<=140&&p.x>=27&&p.x<=259){layout=p.x<143?0:1; selectedName=layout==0?"Violas":"Violins II"; repaint(); return;}
   if(p.y>=10&&p.y<=44&&p.x>=450&&p.x<=730){preset=(preset+1)%presets.size(); repaint(); return;}
-  auto r=stageRect(); auto centre=juce::Point<float>(r.getCentreX(),r.getBottom());
+  auto r=stageRect(); auto centre=juce::Point<float>(r.getCentreX(),r.getBottom()-1);
   if(!r.contains(p))return;
-  auto hit=[&](const auto& sectors){for(const auto& s:sectors){auto path=sectorPath(s,centre,r);if(path.contains(p)){selectedName=s.name;repaint();return true;}}return false;};
-  if(layout==0){ for(const auto& s:standard) if(sectorPath(s,centre,r).contains(p)){selectedName=s.name;repaint();break;} }
-  else hit(antiphonal);
+  if(layout==0){ for(const auto& s:standard) if(standardSectorPath(s,centre,r).contains(p)){selectedName=s.name;repaint();break;} }
+  else { for(const auto& s:antiphonal) if(sectorPath(s,centre,r).contains(p)){selectedName=s.name;repaint();break;} }
  }
 private:
  std::array<juce::String,6> presets{{"Concert Hall","Small Chamber","Scoring Stage","Cathedral","Studio Room","Symphonic Hall"}};
- int preset=0,layout=1; juce::String selectedName="Violins II";
+ int preset=0,layout=1; juce::String selectedName="Violins II", hoveredName;
  juce::Rectangle<float> stageRect()const{return {298,97,674,345};}
+ void mouseMove(const juce::MouseEvent& e) override
+ {
+  juce::String next;
+  if(layout==0){auto r=stageRect();auto centre=juce::Point<float>(r.getCentreX(),r.getBottom()-1);for(const auto& s:standard)if(standardSectorPath(s,centre,r).contains(e.position)){next=s.name;break;}}
+  if(next!=hoveredName){hoveredName=next;repaint();}
+ }
+ void mouseExit(const juce::MouseEvent&) override {if(hoveredName.isNotEmpty()){hoveredName.clear();repaint();}}
  static void rounded(juce::Graphics&g,juce::Rectangle<float>r,juce::Colour stroke,juce::Colour fillc){g.setColour(fillc);g.fillRoundedRectangle(r,9);g.setColour(stroke);g.drawRoundedRectangle(r,9,1);}
  static void drawText(juce::Graphics&g,const juce::String&s,int x,int y,int w,int h,float size,juce::Colour c,juce::Justification j=juce::Justification::centredLeft){g.setColour(c);g.setFont(juce::Font(size));g.drawFittedText(s,{x,y,w,h},j,2);}
  static void knob(juce::Graphics&g,float cx,float cy,const juce::String&name,const juce::String&value,float amount=0.68f)
@@ -124,6 +140,60 @@ private:
  }
  static void meter(juce::Graphics&g,int x,int y,int w,int h,float value)
  {for(int i=0;i<48;++i){float xx=x+i*(w/48.0f);g.setColour(i<48*value?blue.withAlpha(0.9f):line.withAlpha(0.6f));g.fillRect(xx,float(y),w/48.0f-1.0f,float(h));}}
+ static float standardScale(juce::Rectangle<float> r)
+ {
+  constexpr float maxRadius=388.0f*1.6f;
+  return juce::jmin(r.getWidth()/(2.0f*maxRadius),r.getHeight()/maxRadius);
+ }
+ static juce::Path standardSectorPath(const StandardSector& s,juce::Point<float> c,juce::Rectangle<float> r)
+ {
+  const float scale=standardScale(r);
+  const float ri=s.inner*1.6f*scale, ro=s.outer*1.6f*scale;
+  auto edgeAngle=[&](float base,float radius,bool startEdge,bool gap)
+  {
+   if(!gap)return juce::degreesToRadians(base);
+   const float delta=std::asin(juce::jlimit(0.0f,0.99f,5.0f/juce::jmax(1.0f,radius)));
+   return juce::degreesToRadians(base)+(startEdge?-delta:delta);
+  };
+  juce::Path p;
+  for(int i=0;i<=72;++i)
+  {
+   const float t=float(i)/72.0f;
+   const float a=juce::degreesToRadians(s.from+(s.to-s.from)*t);
+   const float adjusted=(i==0&&s.gapStart)?edgeAngle(s.from,ro,true,true):
+                        (i==72&&s.gapEnd)?edgeAngle(s.to,ro,false,true):a;
+   juce::Point<float> q(c.x+std::cos(adjusted)*ro,c.y-std::sin(adjusted)*ro);
+   if(i==0)p.startNewSubPath(q);else p.lineTo(q);
+  }
+  p.lineTo(c.x+std::cos(edgeAngle(s.to,ri,false,s.gapEnd))*ri,c.y-std::sin(edgeAngle(s.to,ri,false,s.gapEnd))*ri);
+  for(int i=1;i<=72;++i)
+  {
+   const float t=float(i)/72.0f;
+   const float base=s.to+(s.from-s.to)*t;
+   float a=juce::degreesToRadians(base);
+   if(i==72&&s.gapStart)a=edgeAngle(s.from,ri,true,true);
+   juce::Point<float> q(c.x+std::cos(a)*ri,c.y-std::sin(a)*ri);
+   p.lineTo(q);
+  }
+  p.closeSubPath();return p;
+ }
+ template<size_t N> void drawStandardSectors(juce::Graphics& g,const std::array<StandardSector,N>& sectors,juce::Point<float> c,juce::Rectangle<float> r)
+ {
+  const float scale=standardScale(r);
+  for(const auto& s:sectors)
+  {
+   auto path=standardSectorPath(s,c,r);
+   const bool sel=juce::String(s.name)==selectedName;
+   const bool hover=juce::String(s.name)==hoveredName&&!sel;
+   g.setColour(sel?selected:(hover?juce::Colour(0x22,0x28,0x42):fill));g.fillPath(path);
+   g.setColour(sel?blue:ink);g.strokePath(path,juce::PathStrokeType(sel?2.5f:2.0f));
+   const float a=juce::degreesToRadians((s.from+s.to)*0.5f);
+   const float radius=(s.inner+s.outer)*0.5f*1.6f*scale;
+   const float x=c.x+std::cos(a)*radius,y=c.y-std::sin(a)*radius;
+   const float arcWidth=juce::jmax(38.0f,2.0f*radius*std::sin(std::abs(juce::degreesToRadians(s.from-s.to))*0.5f)-10.0f);
+   drawText(g,s.label,int(x-arcWidth*0.5f),int(y-11),int(arcWidth),22,14.0f,sel?juce::Colours::white:ink,juce::Justification::centred);
+  }
+ }
  static juce::Path sectorPath(const Sector&s,juce::Point<float>c,juce::Rectangle<float>r)
  {
   float scale=juce::jmin(r.getWidth()/1200.0f,r.getHeight()/519.75f);
@@ -143,7 +213,7 @@ private:
  void drawStage(juce::Graphics&g,juce::Rectangle<float>r)
  {
   auto c=juce::Point<float>(r.getCentreX(),r.getBottom()-1);
-  if(layout==0)drawSectors(g,standard,c,r);else drawSectors(g,antiphonal,c,r);
+  if(layout==0)drawStandardSectors(g,standard,c,r);else drawSectors(g,antiphonal,c,r);
  }
 };
 
