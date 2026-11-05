@@ -57,9 +57,27 @@ void OSRControlLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, in
     const float cx = static_cast<float>(x) + static_cast<float>(width) * 0.5f;
     const float cy = static_cast<float>(y) + static_cast<float>(height) * 0.5f;
     const float angle = startAngle + proportion * (endAngle - startAngle);
-    juce::Path track, value;
-    track.addCentredArc(cx, cy, radius, radius, 0.0f, startAngle, endAngle, true);
-    value.addCentredArc(cx, cy, radius, radius, 0.0f, startAngle, angle, true);
+    // Build both arcs from the exact same angular convention as the pointer.
+    // Sampling the sweep explicitly avoids JUCE arc-direction/angle-wrap
+    // differences when the rotary range crosses 2*pi.
+    const auto makeArc = [cx, cy, radius](float from, float to)
+    {
+        juce::Path path;
+        constexpr int segments = 96;
+        path.startNewSubPath(cx + std::cos(from) * radius,
+                             cy + std::sin(from) * radius);
+        for (int i = 1; i <= segments; ++i)
+        {
+            const float t = static_cast<float>(i) / static_cast<float>(segments);
+            const float a = from + (to - from) * t;
+            path.lineTo(cx + std::cos(a) * radius,
+                        cy + std::sin(a) * radius);
+        }
+        return path;
+    };
+
+    const auto track = makeArc(startAngle, endAngle);
+    const auto value = makeArc(startAngle, angle);
     const juce::PathStrokeType arcStroke(3.0f, juce::PathStrokeType::curved,
                                          juce::PathStrokeType::rounded);
     g.setColour(knobTrack);
@@ -67,8 +85,7 @@ void OSRControlLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, in
     g.setColour(knobValue);
     g.strokePath(value, arcStroke);
 
-    // JUCE Path::addCentredArc uses x = cos(angle), y = sin(angle).
-    // Use the identical convention so the pointer follows the value arc.
+    // Same angle and coordinates as the circular value indicator.
     const juce::Point<float> pointer(std::cos(angle), std::sin(angle));
     g.setColour(juce::Colours::white);
     g.drawLine(cx + pointer.x * radius * 0.35f, cy + pointer.y * radius * 0.35f,
