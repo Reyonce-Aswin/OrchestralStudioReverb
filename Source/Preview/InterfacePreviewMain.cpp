@@ -10,27 +10,27 @@ const juce::Colour line {0x42,0x49,0x5C}, ink {0xEE,0xF0,0xF7}, muted {0xAAB2C4}
 const juce::Colour blue {0x8D,0xB4,0xFF}, selected {0x25,0x34,0x5E};
 constexpr float pi=3.14159265358979323846f;
 struct Sector { const char* name; int ring; float from,to; const char* label; };
-struct StandardSector { const char* name; float inner, outer, from, to; bool gapStart, gapEnd; const char* label; };
+struct StandardSector { const char* name; float inner, outer, from, to; bool gapStart, gapEnd; const char* line1; const char* line2; };
 const std::array<StandardSector,19> standard {{
- {"Piano",62,100,180,0,false,false,"PIANO"},
- {"Violins I",108,253,180,142,false,true,"VIOLINS I"},
- {"Violins II",110,192,142,90,true,false,"VIOLINS II"},
- {"Violas",110,192,90,40,false,true,"VIOLAS"},
- {"Celli",108,217,40,0,true,false,"CELLI"},
- {"Basses",228,313,40,0,true,false,"BASSES"},
- {"Piccolos",202,254,142,121,true,false,"PICCOLOS"},
- {"Flutes",202,254,121,100,false,false,"FLUTES"},
- {"Oboes",202,254,100,79,false,false,"OBOES"},
- {"Clarinets",202,254,79,58,false,false,"CLARINETS"},
- {"Bassoons",202,254,58,40,false,true,"BASSOONS"},
- {"Horns",262,318,180,143,false,true,"HORNS"},
- {"Harp / Celeste",262,318,143,111,true,false,"HARP / CELESTE"},
- {"Percussion",262,318,111,69,false,false,"PERCUSSION"},
- {"Tuned Percussion",262,318,69,40,false,true,"TUNED PERCUSSION"},
- {"Trumpets",326,388,40,30,false,false,"TRUMPETS"},
- {"Tenor Trombones",326,388,30,20,false,false,"TENOR TROMBONES"},
- {"Bass Trombones",326,388,20,12,false,false,"BASS TROMBONES"},
- {"Tuba",326,388,12,0,false,false,"TUBA"}
+ {"Piano",62,100,180,0,false,false,"PIANO",""},
+ {"Violins I",108,253,180,142,false,true,"VIOLINS I",""},
+ {"Violins II",110,192,142,90,true,false,"VIOLINS II",""},
+ {"Violas",110,192,90,40,false,true,"VIOLAS",""},
+ {"Celli",108,217,40,0,true,false,"CELLI",""},
+ {"Basses",228,313,40,0,true,false,"BASSES",""},
+ {"Piccolos",202,254,142,121,true,false,"PICCOLOS",""},
+ {"Flutes",202,254,121,100,false,false,"FLUTES",""},
+ {"Oboes",202,254,100,79,false,false,"OBOES",""},
+ {"Clarinets",202,254,79,58,false,false,"CLARINETS",""},
+ {"Bassoons",202,254,58,40,false,true,"BASSOONS",""},
+ {"Horns",262,318,180,143,false,true,"HORNS",""},
+ {"Harp / Celeste",262,318,143,111,true,false,"HARP /","CELESTE"},
+ {"Percussion",262,318,111,69,false,false,"PERCUSSION",""},
+ {"Tuned Percussion",262,318,69,40,false,true,"TUNED","PERCUSSION"},
+ {"Trumpets",326,388,40,30,false,false,"TRUMPETS",""},
+ {"Tenor Trombones",326,388,30,20,false,false,"TENOR","TROMBONES"},
+ {"Bass Trombones",326,388,20,12,false,false,"BASS","TROMBONES"},
+ {"Tuba",326,388,12,0,false,false,"TUBA",""}
 }};
 const std::array<Sector,18> antiphonal {{
  {"Piano",0,180,0,"PIANO"},{"Violins I",1,180,140,"VIOLINS I"},
