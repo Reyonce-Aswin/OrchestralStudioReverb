@@ -41,5 +41,6 @@ private:
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> drySmoother;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> wetSmoother;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> earlySmoother;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> eqMixSmoother;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OrchestralStudioReverbAudioProcessor)
 };
