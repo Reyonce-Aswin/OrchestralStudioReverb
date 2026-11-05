@@ -7,7 +7,7 @@
 class OrchestraLayoutComponent final : public juce::Component
 {
 public:
-    enum class Layout { Standard, Classical };
+    enum class Layout { Standard, Classical, ChamberModern, ChamberClassical };
 
     OrchestraLayoutComponent();
     void paint(juce::Graphics&) override;
@@ -18,6 +18,7 @@ public:
 
     void setLayout(Layout, bool notify = false);
     Layout getLayout() const noexcept { return currentLayout; }
+    juce::String getTitle() const;
     void setSelectedSection(const juce::String&, bool notify = false);
     juce::String getSelectedSection() const;
     juce::String getSelectedParameterName() const;
