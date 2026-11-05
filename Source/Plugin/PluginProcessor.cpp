@@ -37,6 +37,40 @@ OrchestralStudioReverbAudioProcessor::createParameterLayout()
         "Harp / Celeste", "Percussion", "Tuned Percussion",
         "Trumpets", "Tenor Trombones", "Bass Trombones", "Tuba"
     };
+    const StringArray cutSlopeChoices { "12 dB/oct", "24 dB/oct", "36 dB/oct", "48 dB/oct" };
+    const StringArray lowTypeChoices { "Low Cut", "Low Shelf" };
+    const StringArray highTypeChoices { "High Shelf", "High Cut" };
+    const float eqFrequencies[8] { 30.0f, 120.0f, 300.0f, 700.0f, 1500.0f, 3500.0f, 7000.0f, 16000.0f };
+    for (int band = 0; band < 8; ++band)
+    {
+        const auto prefix = "eqBand" + String(band + 1);
+        layout.add(std::make_unique<AudioParameterFloat>(ParameterID { prefix + "Freq", 1 },
+            "EQ " + String(band + 1) + " Frequency",
+            NormalisableRange<float>(20.0f, 20000.0f, 0.1f, 0.25f), eqFrequencies[band], "Hz"));
+        layout.add(std::make_unique<AudioParameterFloat>(ParameterID { prefix + "Gain", 1 },
+            "EQ " + String(band + 1) + " Gain",
+            NormalisableRange<float>(-18.0f, 18.0f, 0.1f), 0.0f, "dB"));
+        layout.add(std::make_unique<AudioParameterFloat>(ParameterID { prefix + "Q", 1 },
+            "EQ " + String(band + 1) + " Q",
+            NormalisableRange<float>(0.3f, 8.0f, 0.01f, 0.5f), 0.7071f));
+        layout.add(std::make_unique<AudioParameterChoice>(ParameterID { prefix + "Slope", 1 },
+            "EQ " + String(band + 1) + " Slope", cutSlopeChoices, 1));
+        if (band == 0)
+            layout.add(std::make_unique<AudioParameterChoice>(ParameterID { prefix + "Type", 1 },
+                "EQ Low Band Type", lowTypeChoices, 0));
+        else if (band == 7)
+            layout.add(std::make_unique<AudioParameterChoice>(ParameterID { prefix + "Type", 1 },
+                "EQ High Band Type", highTypeChoices, 1));
+        else
+            layout.add(std::make_unique<AudioParameterChoice>(ParameterID { prefix + "Type", 1 },
+                "EQ " + String(band + 1) + " Type", StringArray { "Bell" }, 0));
+        layout.add(std::make_unique<AudioParameterBool>(ParameterID { prefix + "Enabled", 1 },
+            "EQ " + String(band + 1) + " Enabled", false));
+    }
+
+    layout.add(std::make_unique<AudioParameterBool>(ParameterID { "eqBypass", 1 },
+        "EQ Bypass", false));
+
     layout.add(std::make_unique<AudioParameterChoice>(
         ParameterID { "stagePosition", 1 }, "Stage Position", stageNames, 3));
     layout.add(std::make_unique<AudioParameterChoice>(
@@ -49,6 +83,7 @@ void OrchestralStudioReverbAudioProcessor::prepareToPlay(double sampleRate, int 
 {
     reverb.prepare(sampleRate, static_cast<std::size_t>(samplesPerBlock));
     earlyReflections.prepare(sampleRate);
+    parametricEQ.prepare(sampleRate);
     drySmoother.reset(sampleRate, 0.03);
     wetSmoother.reset(sampleRate, 0.03);
     earlySmoother.reset(sampleRate, 0.03);
@@ -61,6 +96,7 @@ void OrchestralStudioReverbAudioProcessor::releaseResources()
 {
     reverb.reset();
     earlyReflections.reset();
+    parametricEQ.reset();
 }
 
 bool OrchestralStudioReverbAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
@@ -108,6 +144,40 @@ void OrchestralStudioReverbAudioProcessor::processBlock(juce::AudioBuffer<float>
     earlyParameters.useExplicitStagePosition = true;
     earlyReflections.setParameters(earlyParameters);
 
+    const bool eqBypassed = parameters.getRawParameterValue("eqBypass")->load() > 0.5f;
+    if (!eqBypassed)
+    {
+        for (int band = 0; band < 8; ++band)
+        {
+            const auto prefix = "eqBand" + juce::String(band + 1);
+            orchestral::dsp::ParametricEQ::Band eqBand;
+            const int typeChoice = juce::roundToInt(parameters.getRawParameterValue(prefix + "Type")->load());
+            if (band == 0)
+                eqBand.type = typeChoice == 0 ? orchestral::dsp::ParametricEQ::Type::LowCut
+                                              : orchestral::dsp::ParametricEQ::Type::LowShelf;
+            else if (band == 7)
+                eqBand.type = typeChoice == 0 ? orchestral::dsp::ParametricEQ::Type::HighShelf
+                                              : orchestral::dsp::ParametricEQ::Type::HighCut;
+            else
+                eqBand.type = orchestral::dsp::ParametricEQ::Type::Bell;
+            eqBand.frequency = parameters.getRawParameterValue(prefix + "Freq")->load();
+            eqBand.gainDb = parameters.getRawParameterValue(prefix + "Gain")->load();
+            eqBand.q = parameters.getRawParameterValue(prefix + "Q")->load();
+            eqBand.slope = juce::roundToInt(parameters.getRawParameterValue(prefix + "Slope")->load());
+            eqBand.enabled = parameters.getRawParameterValue(prefix + "Enabled")->load() > 0.5f;
+            parametricEQ.setBand(band, eqBand);
+        }
+    }
+    else
+    {
+        for (int band = 0; band < 8; ++band)
+        {
+            orchestral::dsp::ParametricEQ::Band bypassBand;
+            bypassBand.enabled = false;
+            parametricEQ.setBand(band, bypassBand);
+        }
+    }
+
     drySmoother.setTargetValue(parameters.getRawParameterValue("dry")->load());
     wetSmoother.setTargetValue(parameters.getRawParameterValue("wet")->load());
     earlySmoother.setTargetValue(parameters.getRawParameterValue("early")->load());
@@ -125,9 +195,12 @@ void OrchestralStudioReverbAudioProcessor::processBlock(juce::AudioBuffer<float>
         const float dryGain = drySmoother.getNextValue();
         const float lateGain = wetSmoother.getNextValue();
         const float earlyGain = earlySmoother.getNextValue();
-        left[i] = dryGain * dryL + lateGain * lateL + earlyGain * earlyL;
+        float wetL = lateGain * lateL + earlyGain * earlyL;
+        float wetR = lateGain * lateR + earlyGain * earlyR;
+        parametricEQ.processSample(wetL, wetR);
+        left[i] = dryGain * dryL + wetL;
         if (right != nullptr)
-            right[i] = dryGain * dryR + lateGain * lateR + earlyGain * earlyR;
+            right[i] = dryGain * dryR + wetR;
     }
 }
 
