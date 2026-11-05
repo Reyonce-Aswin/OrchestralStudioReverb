@@ -655,6 +655,7 @@ void OrchestralStudioReverbAudioProcessorEditor::rebuildEQAttachments()
 void OrchestralStudioReverbAudioProcessorEditor::setActiveView(bool showEQ)
 {
     showingEQ = showEQ;
+    rebuildEQAttachments();
     const bool showStage = !showEQ;
     selectorTitle.setVisible(showStage);
     stagePositionLabel.setVisible(showStage);
@@ -735,10 +736,13 @@ void OrchestralStudioReverbAudioProcessorEditor::paint(juce::Graphics& g)
     const int controlsTop = getHeight() - 166;
     g.setColour(border);
     g.drawLine(24.0f, 64.0f, static_cast<float>(getWidth() - 24), 64.0f, 1.0f);
-    g.drawLine(24.0f, static_cast<float>(controlsTop - 10),
-               static_cast<float>(getWidth() - 24), static_cast<float>(controlsTop - 10), 1.0f);
-    drawLetterSpaced(g, "ROOM / REVERB / MIX", { 26.0f, static_cast<float>(controlsTop - 7),
-                                                  220.0f, 15.0f }, 9.0f, muted);
+    if (!showingEQ)
+    {
+        g.drawLine(24.0f, static_cast<float>(controlsTop - 10),
+                   static_cast<float>(getWidth() - 24), static_cast<float>(controlsTop - 10), 1.0f);
+        drawLetterSpaced(g, "ROOM / REVERB / MIX", { 26.0f, static_cast<float>(controlsTop - 7),
+                                                      220.0f, 15.0f }, 9.0f, muted);
+    }
 }
 
 void OrchestralStudioReverbAudioProcessorEditor::resized()
@@ -746,6 +750,30 @@ void OrchestralStudioReverbAudioProcessorEditor::resized()
     constexpr int margin = 26;
     title.setBounds(margin, 14, 360, 34);
     presetLabel.setBounds(getWidth() / 2 - 100, 14, 200, 34);
+    stageViewButton.setBounds(getWidth() - 178, 17, 72, 28);
+    eqViewButton.setBounds(getWidth() - 98, 17, 72, 28);
+
+    if (showingEQ)
+    {
+        eqBypassButton.setBounds(26, 72, 122, 25);
+        eqGraph.setBounds(26, 104, getWidth() - 52, 330);
+        const int bandWidth = (getWidth() - 52) / 8;
+        for (int i = 0; i < 8; ++i)
+            eqBandButtons[i].setBounds(26 + i * bandWidth, 444, bandWidth - 5, 30);
+        eqEnableButton.setBounds(26, 492, 96, 28);
+        eqTypeLabel.setBounds(140, 488, 120, 14);
+        eqTypeBox.setBounds(140, 504, 120, 28);
+        eqSlopeLabel.setBounds(276, 488, 140, 14);
+        eqSlopeBox.setBounds(276, 504, 140, 28);
+        const int columnWidth = (getWidth() - 52) / 3;
+        eqFrequencyLabel.setBounds(26, 545, columnWidth - 12, 14);
+        eqFrequency.setBounds(26, 560, columnWidth - 12, 50);
+        eqGainLabel.setBounds(26 + columnWidth, 545, columnWidth - 12, 14);
+        eqGain.setBounds(26 + columnWidth, 560, columnWidth - 12, 50);
+        eqQLabel.setBounds(26 + columnWidth * 2, 545, columnWidth - 12, 14);
+        eqQ.setBounds(26 + columnWidth * 2, 560, columnWidth - 12, 50);
+        return;
+    }
 
     selectorTitle.setBounds(26, 69, 220, 27);
     standardLayoutButton.setBounds(250, 69, 112, 27);
