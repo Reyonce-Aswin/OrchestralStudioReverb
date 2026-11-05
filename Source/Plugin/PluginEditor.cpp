@@ -240,114 +240,156 @@ void OSREQGraph::paint(juce::Graphics& g)
     };
     const bool eqBypassed = value("eqBypass") > 0.5f;
     const float displaySampleRate = static_cast<float>(std::max(1000.0, processor.getSampleRate()));
+    // Draw a conventional combined EQ response: multiply the magnitude of
+    // every active filter section (add their dB responses). Use double precision
+    // and oversample the display so narrow Q peaks cannot alias into false spikes.
     juce::Path response;
-    // Dense logarithmic sampling is essential for narrow, resonant EQ peaks.
-    // A coarse graph grid aliases high-Q filters into artificial vertical spikes.
-    constexpr int responseSamples = 2048;
+    const int responseSamples = juce::jmax(4096, static_cast<int>(plot.getWidth()) * 8);
+    const double sr = std::max(8000.0, static_cast<double>(processor.getSampleRate()));
+    const auto sectionDb = [](double b0, double b1, double b2,
+                              double a1, double a2, double hz, double sampleRate)
+    {
+        const double w = juce::MathConstants<double>::twoPi * hz / sampleRate;
+        const double c1 = std::cos(w), s1 = std::sin(w);
+        const double c2 = std::cos(2.0 * w), s2 = std::sin(2.0 * w);
+        const double nr = b0 + b1 * c1 + b2 * c2;
+        const double ni = -b1 * s1 - b2 * s2;
+        const double dr = 1.0 + a1 * c1 + a2 * c2;
+        const double di = -a1 * s1 - a2 * s2;
+        const double numerator = nr * nr + ni * ni;
+        const double denominator = dr * dr + di * di;
+        if (!std::isfinite(numerator) || !std::isfinite(denominator) || denominator < 1.0e-24)
+            return 0.0;
+        return 10.0 * std::log10(std::max(1.0e-24, numerator / denominator));
+    };
+
     for (int sample = 0; sample <= responseSamples; ++sample)
     {
-        const float proportion = static_cast<float>(sample) / static_cast<float>(responseSamples);
-        const float frequency = 20.0f * std::pow(1000.0f, proportion);
-        float responseDb = 0.0f;
-        const auto magnitudeDb = [](float b0, float b1, float b2, float a1, float a2, float hz, float sr)
+        const double proportion = static_cast<double>(sample) / responseSamples;
+        const double frequency = 20.0 * std::pow(1000.0, proportion);
+        double totalDb = 0.0;
+
+        if (!eqBypassed)
         {
-            const float w = 2.0f * kPi * hz / sr;
-            const float c1 = std::cos(w), s1 = std::sin(w);
-            const float c2 = std::cos(2.0f * w), s2 = std::sin(2.0f * w);
-            const float nr = b0 + b1 * c1 + b2 * c2;
-            const float ni = -b1 * s1 - b2 * s2;
-            const float dr = 1.0f + a1 * c1 + a2 * c2;
-            const float di = -a1 * s1 - a2 * s2;
-            const float numerator = nr * nr + ni * ni;
-            const float denominator = std::max(1.0e-16f, dr * dr + di * di);
-            return 10.0f * std::log10(std::max(1.0e-16f, numerator / denominator));
-        };
-        for (int band = 0; band < 8; ++band)
-        {
-            const auto prefix = "eqBand" + juce::String(band + 1);
-            if (eqBypassed || (value(prefix + "Enabled") < 0.5f && band != selectedBand))
-                continue;
-            const float centre = value(prefix + "Freq");
-            const float gain = value(prefix + "Gain");
-            const float q = std::max(0.3f, value(prefix + "Q"));
-            const int typeChoice = juce::roundToInt(value(prefix + "Type"));
-            const bool lowCut = band == 0 && typeChoice == 0;
-            const bool highCut = band == 7 && typeChoice == 1;
-            const int type = lowCut ? 0 : (highCut ? 4 : (band == 0 ? 1 : (band == 7 ? 3 : 2)));
-            const float w0 = 2.0f * kPi * centre / displaySampleRate;
-            const float cosine = std::cos(w0), sine = std::sin(w0);
-            const int slope = juce::roundToInt(value(prefix + "Slope"));
-            const bool isCut = lowCut || highCut;
-            const int biquadStages = isCut ? (slope == 0 ? 0 : (slope == 3 ? 2 : 1)) : 1;
-            const bool firstOrder = isCut && (slope == 0 || slope == 2);
-            const float butterworth[4][4] = {
-                { 0.70710678f, 0.0f, 0.0f, 0.0f },
-                { 0.54119610f, 1.3065630f, 0.0f, 0.0f },
-                { 0.51763809f, 0.70710678f, 1.9318517f, 0.0f },
-                { 0.50979558f, 0.60134489f, 0.89997622f, 2.5629154f }
-            };
-            const float resonance = std::clamp(q / 0.7071f, 0.5f, 2.5f);
-            for (int stage = 0; stage < biquadStages + (firstOrder ? 1 : 0); ++stage)
+            for (int band = 0; band < 8; ++band)
             {
-                if (firstOrder && stage == biquadStages)
-                {
-                    const float k = std::tan(kPi * centre / displaySampleRate);
-                    const float norm = 1.0f / (1.0f + k);
-                    const float b0 = lowCut ? norm : k * norm;
-                    const float b1 = lowCut ? -norm : k * norm;
-                    const float a1 = (k - 1.0f) * norm;
-                    responseDb += magnitudeDb(b0, b1, 0.0f, a1, 0.0f, frequency, displaySampleRate);
+                const auto prefix = "eqBand" + juce::String(band + 1);
+                const bool enabled = value(prefix + "Enabled") > 0.5f || band == selectedBand;
+                if (!enabled)
                     continue;
-                }
-                const float stageQ = isCut
-                    ? std::clamp(butterworth[std::max(0, biquadStages - 1)][stage] * resonance, 0.25f, 3.0f)
-                    : std::clamp(q, 0.1f, 12.0f);
-                const float alpha = sine / (2.0f * std::max(0.1f, stageQ));
-                const float amplitude = std::pow(10.0f, std::clamp(gain, -24.0f, 24.0f) / 40.0f);
-                float b0 = 1.0f, b1 = 0.0f, b2 = 0.0f, a0 = 1.0f, a1 = 0.0f, a2 = 0.0f;
-                if (type == 0 || type == 4)
+
+                const double centre = std::clamp(static_cast<double>(value(prefix + "Freq")),
+                                                  20.0, sr * 0.45);
+                const double gain = std::clamp(static_cast<double>(value(prefix + "Gain")),
+                                                 -24.0, 24.0);
+                const double q = std::max(0.3, static_cast<double>(value(prefix + "Q")));
+                const int typeChoice = juce::roundToInt(value(prefix + "Type"));
+                const bool lowCut = band == 0 && typeChoice == 0;
+                const bool highCut = band == 7 && typeChoice == 1;
+                const bool lowShelf = band == 0 && typeChoice == 1;
+                const bool highShelf = band == 7 && typeChoice == 0;
+                const bool isCut = lowCut || highCut;
+                const int slope = juce::jlimit(0, 3, juce::roundToInt(value(prefix + "Slope")));
+                const int biquadStages = isCut ? (slope == 0 ? 0 : (slope == 3 ? 2 : 1)) : 1;
+                const bool firstOrder = isCut && (slope == 0 || slope == 2);
+                const double w0 = juce::MathConstants<double>::twoPi * centre / sr;
+                const double cosine = std::cos(w0);
+                const double sine = std::sin(w0);
+                const double amplitude = std::pow(10.0, gain / 40.0);
+                const double resonance = std::clamp(q / 0.7071067811865476, 0.5, 2.5);
+                constexpr double butterworth[4][4] = {
+                    { 0.7071067811865476, 0.0, 0.0, 0.0 },
+                    { 0.541196100146197, 1.306562964876377, 0.0, 0.0 },
+                    { 0.517638090205042, 0.707106781186548, 1.931851652578136, 0.0 },
+                    { 0.509795579104159, 0.601344886935045, 0.899976223136416, 2.562915447741506 }
+                };
+
+                const int sections = biquadStages + (firstOrder ? 1 : 0);
+                for (int stage = 0; stage < sections; ++stage)
                 {
-                    if (type == 0) { b0 = (1.0f + cosine) * 0.5f; b1 = -(1.0f + cosine); b2 = b0; }
-                    else { b0 = (1.0f - cosine) * 0.5f; b1 = 1.0f - cosine; b2 = b0; }
-                    a0 = 1.0f + alpha; a1 = -2.0f * cosine; a2 = 1.0f - alpha;
-                }
-                else if (type == 2)
-                {
-                    b0 = 1.0f + alpha * amplitude; b1 = -2.0f * cosine; b2 = 1.0f - alpha * amplitude;
-                    a0 = 1.0f + alpha / amplitude; a1 = -2.0f * cosine; a2 = 1.0f - alpha / amplitude;
-                }
-                else
-                {
-                    const float shelfSlope = std::clamp(q / 0.7071f, 0.1f, 2.0f);
-                    const float shelfTerm = std::max(0.1f, (amplitude + 1.0f / amplitude) * (1.0f / shelfSlope - 1.0f) + 2.0f);
-                    const float shelfAlpha = (sine * 0.5f) * std::sqrt(shelfTerm);
-                    const float root = 2.0f * std::sqrt(amplitude) * shelfAlpha;
-                    if (type == 1)
+                    double b0 = 1.0, b1 = 0.0, b2 = 0.0;
+                    double a0 = 1.0, a1 = 0.0, a2 = 0.0;
+
+                    if (firstOrder && stage == biquadStages)
                     {
-                        b0 = amplitude * ((amplitude + 1.0f) - (amplitude - 1.0f) * cosine + root);
-                        b1 = 2.0f * amplitude * ((amplitude - 1.0f) - (amplitude + 1.0f) * cosine);
-                        b2 = amplitude * ((amplitude + 1.0f) - (amplitude - 1.0f) * cosine - root);
-                        a0 = (amplitude + 1.0f) + (amplitude - 1.0f) * cosine + root;
-                        a1 = -2.0f * ((amplitude - 1.0f) + (amplitude + 1.0f) * cosine);
-                        a2 = (amplitude + 1.0f) + (amplitude - 1.0f) * cosine - root;
+                        const double k = std::tan(w0 * 0.5);
+                        const double norm = 1.0 / (1.0 + k);
+                        if (lowCut) { b0 = norm; b1 = -norm; }
+                        else { b0 = k * norm; b1 = k * norm; }
+                        a1 = (k - 1.0) * norm;
                     }
                     else
                     {
-                        b0 = amplitude * ((amplitude + 1.0f) + (amplitude - 1.0f) * cosine + root);
-                        b1 = -2.0f * amplitude * ((amplitude - 1.0f) + (amplitude + 1.0f) * cosine);
-                        b2 = amplitude * ((amplitude + 1.0f) + (amplitude - 1.0f) * cosine - root);
-                        a0 = (amplitude + 1.0f) - (amplitude - 1.0f) * cosine + root;
-                        a1 = 2.0f * ((amplitude - 1.0f) - (amplitude + 1.0f) * cosine);
-                        a2 = (amplitude + 1.0f) - (amplitude - 1.0f) * cosine - root;
+                        const double stageQ = isCut
+                            ? std::clamp(butterworth[std::max(0, biquadStages - 1)][stage] * resonance,
+                                         0.25, 3.0)
+                            : std::clamp(q, 0.1, 12.0);
+                        const double alpha = sine / (2.0 * std::max(0.1, stageQ));
+
+                        if (lowCut || highCut)
+                        {
+                            if (lowCut)
+                            {
+                                b0 = (1.0 + cosine) * 0.5;
+                                b1 = -(1.0 + cosine);
+                                b2 = b0;
+                            }
+                            else
+                            {
+                                b0 = (1.0 - cosine) * 0.5;
+                                b1 = 1.0 - cosine;
+                                b2 = b0;
+                            }
+                            a0 = 1.0 + alpha;
+                            a1 = -2.0 * cosine;
+                            a2 = 1.0 - alpha;
+                        }
+                        else if (!lowShelf && !highShelf)
+                        {
+                            b0 = 1.0 + alpha * amplitude;
+                            b1 = -2.0 * cosine;
+                            b2 = 1.0 - alpha * amplitude;
+                            a0 = 1.0 + alpha / amplitude;
+                            a1 = -2.0 * cosine;
+                            a2 = 1.0 - alpha / amplitude;
+                        }
+                        else
+                        {
+                            const double shelfSlope = std::clamp(q / 0.7071067811865476, 0.1, 2.0);
+                            const double shelfTerm = std::max(0.1,
+                                (amplitude + 1.0 / amplitude) * (1.0 / shelfSlope - 1.0) + 2.0);
+                            const double shelfAlpha = (sine * 0.5) * std::sqrt(shelfTerm);
+                            const double root = 2.0 * std::sqrt(amplitude) * shelfAlpha;
+                            if (lowShelf)
+                            {
+                                b0 = amplitude * ((amplitude + 1.0) - (amplitude - 1.0) * cosine + root);
+                                b1 = 2.0 * amplitude * ((amplitude - 1.0) - (amplitude + 1.0) * cosine);
+                                b2 = amplitude * ((amplitude + 1.0) - (amplitude - 1.0) * cosine - root);
+                                a0 = (amplitude + 1.0) + (amplitude - 1.0) * cosine + root;
+                                a1 = -2.0 * ((amplitude - 1.0) + (amplitude + 1.0) * cosine);
+                                a2 = (amplitude + 1.0) + (amplitude - 1.0) * cosine - root;
+                            }
+                            else
+                            {
+                                b0 = amplitude * ((amplitude + 1.0) + (amplitude - 1.0) * cosine + root);
+                                b1 = -2.0 * amplitude * ((amplitude - 1.0) + (amplitude + 1.0) * cosine);
+                                b2 = amplitude * ((amplitude + 1.0) + (amplitude - 1.0) * cosine - root);
+                                a0 = (amplitude + 1.0) - (amplitude - 1.0) * cosine + root;
+                                a1 = 2.0 * ((amplitude - 1.0) - (amplitude + 1.0) * cosine);
+                                a2 = (amplitude + 1.0) - (amplitude - 1.0) * cosine - root;
+                            }
+                        }
                     }
+
+                    const double inverseA0 = 1.0 / a0;
+                    totalDb += sectionDb(b0 * inverseA0, b1 * inverseA0, b2 * inverseA0,
+                                         a1 * inverseA0, a2 * inverseA0, frequency, sr);
                 }
-                const float invA0 = 1.0f / a0;
-                responseDb += magnitudeDb(b0 * invA0, b1 * invA0, b2 * invA0,
-                                          a1 * invA0, a2 * invA0, frequency, displaySampleRate);
             }
         }
-        const float x = plot.getX() + proportion * plot.getWidth();
-        const float y = gainToY(juce::jlimit(-18.0f, 18.0f, responseDb));
+
+        const float x = plot.getX() + static_cast<float>(proportion) * plot.getWidth();
+        const float y = gainToY(static_cast<float>(std::clamp(totalDb, -18.0, 18.0)));
         if (sample == 0) response.startNewSubPath(x, y);
         else response.lineTo(x, y);
     }
