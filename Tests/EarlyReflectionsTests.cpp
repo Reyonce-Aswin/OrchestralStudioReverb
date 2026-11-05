@@ -38,7 +38,8 @@ int main()
         if (firstNonZeroSample < 0 && energy > 1.0e-14)
             firstNonZeroSample = n;
 
-        if (n > sampleRate / 5)
+        // The later taps should still be arriving after the first reflections.
+        if (n > sampleRate / 20)
             lateReflectionEnergy += energy;
     }
 
