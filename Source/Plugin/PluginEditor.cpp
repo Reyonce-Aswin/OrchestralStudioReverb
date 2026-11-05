@@ -84,40 +84,52 @@ OrchestralStudioReverbAudioProcessorEditor::OrchestralStudioReverbAudioProcessor
 
     syncStageSelectionFromHost();
     startTimerHz(20);
-    setSize(1180, 840);
+    setResizable(true, true);
+    setResizeLimits(850, 620, 1400, 1000);
+    setSize(1000, 700);
 }
 
 void OrchestralStudioReverbAudioProcessorEditor::paint(juce::Graphics& g)
 {
     g.fillAll(background);
     g.setColour(border);
-    g.drawLine(28.0f, 70.0f, static_cast<float>(getWidth() - 28), 70.0f, 1.0f);
-    g.drawLine(28.0f, 650.0f, static_cast<float>(getWidth() - 28), 650.0f, 1.0f);
+    const int sectionTop = 76;
+    const int controlsTop = getHeight() - 166;
+    g.drawLine(24.0f, 64.0f, static_cast<float>(getWidth() - 24), 64.0f, 1.0f);
+    g.drawLine(24.0f, static_cast<float>(controlsTop - 10),
+               static_cast<float>(getWidth() - 24), static_cast<float>(controlsTop - 10), 1.0f);
     g.setColour(muted);
-    g.setFont(11.0f);
-    g.drawText("ORCHESTRA LAYOUT", 30, 82, 220, 18, juce::Justification::centredLeft);
-    g.drawText("SPACE  /  EARLY REFLECTIONS", getWidth() - 300, 82, 270, 18,
+    g.setFont(10.5f);
+    g.drawText("ORCHESTRA LAYOUT", 26, sectionTop, 220, 16, juce::Justification::centredLeft);
+    g.drawText("SPACE  /  EARLY REFLECTIONS", getWidth() - 280, sectionTop, 254, 16,
                juce::Justification::centredRight);
 }
 
 void OrchestralStudioReverbAudioProcessorEditor::resized()
 {
-    title.setBounds(30, 20, 420, 34);
-    presetLabel.setBounds(getWidth() / 2 - 115, 20, 230, 34);
-    stagePositionLabel.setBounds(getWidth() - 330, 24, 300, 28);
-    stageMap.setBounds(0, 100, getWidth(), 540);
+    constexpr int margin = 26;
+    title.setBounds(margin, 16, 390, 34);
+    presetLabel.setBounds(getWidth() / 2 - 100, 16, 200, 34);
+    stagePositionLabel.setBounds(getWidth() - 300, 18, 274, 30);
 
-    const int y = 665;
+    const int controlsTop = getHeight() - 166;
+    const int mapTop = 96;
+    const int mapHeight = juce::jmax(220, controlsTop - mapTop - 14);
+    stageMap.setBounds(0, mapTop, getWidth(), mapHeight);
+
     const int count = 7;
-    const int width = (getWidth() - 60) / count;
+    const int availableWidth = getWidth() - margin * 2;
+    const int cellWidth = availableWidth / count;
     juce::Slider* sliders[] = { &roomSize, &preDelay, &decay, &damping, &early, &dry, &wet };
     juce::Label* labels[] = { &roomSizeLabel, &preDelayLabel, &decayLabel, &dampingLabel,
                               &earlyLabel, &dryLabel, &wetLabel };
     for (int i = 0; i < count; ++i)
     {
-        const int x = 30 + i * width;
-        labels[i]->setBounds(x, y, width, 18);
-        sliders[i]->setBounds(x + (width - 100) / 2, y + 18, 100, 112);
+        const int x = margin + i * cellWidth;
+        labels[i]->setBounds(x, controlsTop + 1, cellWidth, 16);
+        const int dialWidth = juce::jmin(88, cellWidth - 8);
+        sliders[i]->setBounds(x + (cellWidth - dialWidth) / 2,
+                              controlsTop + 17, dialWidth, 142);
     }
 }
 

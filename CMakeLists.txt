@@ -85,20 +85,24 @@ if(OSR_BUILD_VST3)
         message(STATUS "JUCE not found: building standalone DSP library/tests only. Set JUCE_DIR or enable OSR_FETCH_JUCE.")
     endif()
     if(TARGET juce::juce_gui_extra)
-    # Build the orchestra selector in isolation before integrating it into the plugin.
-    juce_add_gui_app(OrchestraLayoutPreview
-        PRODUCT_NAME "Orchestra Layout Preview"
+    # Full plugin-editor preview hosted in a standalone JUCE window.
+    juce_add_gui_app(OrchestralStudioReverbFullPreview
+        PRODUCT_NAME "Orchestral Studio Reverb UI Preview"
     )
-    target_sources(OrchestraLayoutPreview PRIVATE
-        Source/Preview/PreviewMain.cpp
+    target_sources(OrchestralStudioReverbFullPreview PRIVATE
+        Source/Preview/FullPluginPreviewMain.cpp
+        Source/Plugin/PluginProcessor.cpp
+        Source/Plugin/PluginEditor.cpp
         Source/UI/OrchestraLayoutComponent.cpp
     )
-    target_include_directories(OrchestraLayoutPreview PRIVATE Source/UI)
-    target_compile_definitions(OrchestraLayoutPreview PRIVATE
+    target_include_directories(OrchestralStudioReverbFullPreview PRIVATE Source Source/DSP Source/UI)
+    target_compile_definitions(OrchestralStudioReverbFullPreview PRIVATE
         JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0
     )
-    target_link_libraries(OrchestraLayoutPreview PRIVATE
-        juce::juce_gui_extra
+    target_link_libraries(OrchestralStudioReverbFullPreview PRIVATE
+        osr_dsp
+        juce::juce_audio_utils
+        juce::juce_dsp
         juce::juce_recommended_config_flags
         juce::juce_recommended_warning_flags
     )
