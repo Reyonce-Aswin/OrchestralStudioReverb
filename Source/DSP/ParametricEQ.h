@@ -53,7 +53,7 @@ public:
 
         const bool isCut = parameters.type == Type::LowCut || parameters.type == Type::HighCut;
         const int slopeIndex = std::clamp(parameters.slope, 0, 3);
-        const int stageCount = isCut ? (slopeIndex == 0 || slopeIndex == 2 ? 1 : (slopeIndex == 1 ? 1 : 2)) : 1;
+        const int stageCount = isCut ? (slopeIndex == 0 ? 0 : (slopeIndex == 3 ? 2 : 1)) : 1;
         const bool addFirstOrderStage = isCut && (slopeIndex == 0 || slopeIndex == 2);
         const auto stageQs = butterworthQs[static_cast<std::size_t>(std::clamp(stageCount - 1, 0, 3))];
         const float resonance = std::clamp(parameters.q / 0.7071f, 0.5f, 2.5f);
