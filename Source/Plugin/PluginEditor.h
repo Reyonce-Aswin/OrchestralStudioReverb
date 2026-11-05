@@ -14,12 +14,15 @@ public:
 private:
     void timerCallback() override;
     void syncStageSelectionFromHost();
+    void updateValueLabels();
 
     OrchestralStudioReverbAudioProcessor& processor;
     OrchestraLayoutComponent stageMap;
     juce::Slider decay, damping, roomSize, preDelay, early, dry, wet;
     juce::Label title, presetLabel, decayLabel, dampingLabel, roomSizeLabel, preDelayLabel;
     juce::Label earlyLabel, dryLabel, wetLabel, stagePositionLabel;
+    juce::Label roomSizeValue, preDelayValue, decayValue, dampingValue;
+    juce::Label earlyValue, dryValue, wetValue;
     using Attachment = juce::AudioProcessorValueTreeState::SliderAttachment;
     std::unique_ptr<Attachment> decayAttachment, dampingAttachment, roomSizeAttachment;
     std::unique_ptr<Attachment> preDelayAttachment, earlyAttachment, dryAttachment, wetAttachment;
