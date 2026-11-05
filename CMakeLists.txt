@@ -32,6 +32,11 @@ if(OSR_BUILD_TESTS)
     add_executable(osr_early_reflections_tests Tests/EarlyReflectionsTests.cpp)
     target_link_libraries(osr_early_reflections_tests PRIVATE osr_dsp)
     add_test(NAME osr_early_reflections_tests COMMAND osr_early_reflections_tests)
+
+    add_executable(osr_parametric_eq_tests Tests/ParametricEQTests.cpp)
+    target_include_directories(osr_parametric_eq_tests PRIVATE Source/DSP)
+    target_compile_features(osr_parametric_eq_tests PRIVATE cxx_std_17)
+    add_test(NAME osr_parametric_eq_tests COMMAND osr_parametric_eq_tests)
 endif()
 
 if(OSR_BUILD_VST3)
