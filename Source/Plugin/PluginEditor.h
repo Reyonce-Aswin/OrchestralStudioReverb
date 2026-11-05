@@ -34,6 +34,7 @@ private:
     OrchestralStudioReverbAudioProcessor& processor;
     OSRControlLookAndFeel controlLookAndFeel;
     OrchestraLayoutComponent stageMap;
+    juce::String lastDisplayedStageSelection;
     juce::Label selectorTitle;
     juce::TextButton standardLayoutButton { "FULL MODERN" };
     juce::TextButton classicalLayoutButton { "FULL CLASSICAL" };
