@@ -170,9 +170,188 @@ void OSRControlLookAndFeel::drawButtonText(juce::Graphics& g, juce::TextButton& 
                      juce::Justification::centred, 1);
 }
 
+
+float OSREQGraph::frequencyToX(float frequency) const
+{
+    const auto area = getLocalBounds().toFloat().reduced(48.0f, 26.0f);
+    const float proportion = std::log(std::clamp(frequency, 20.0f, 20000.0f) / 20.0f)
+                           / std::log(1000.0f);
+    return area.getX() + proportion * area.getWidth();
+}
+
+float OSREQGraph::xToFrequency(float x) const
+{
+    const auto area = getLocalBounds().toFloat().reduced(48.0f, 26.0f);
+    const float proportion = juce::jlimit(0.0f, 1.0f, (x - area.getX()) / area.getWidth());
+    return 20.0f * std::pow(1000.0f, proportion);
+}
+
+float OSREQGraph::gainToY(float gain) const
+{
+    const auto area = getLocalBounds().toFloat().reduced(48.0f, 26.0f);
+    return area.getY() + (18.0f - juce::jlimit(-18.0f, 18.0f, gain)) / 36.0f * area.getHeight();
+}
+
+float OSREQGraph::yToGain(float y) const
+{
+    const auto area = getLocalBounds().toFloat().reduced(48.0f, 26.0f);
+    return juce::jlimit(-18.0f, 18.0f, 18.0f - 36.0f * (y - area.getY()) / area.getHeight());
+}
+
+void OSREQGraph::paint(juce::Graphics& g)
+{
+    auto area = getLocalBounds().toFloat();
+    g.setColour(panel);
+    g.fillRoundedRectangle(area, 8.0f);
+    g.setColour(border);
+    g.drawRoundedRectangle(area, 8.0f, 1.0f);
+    auto plot = area.reduced(48.0f, 26.0f);
+
+    g.setFont(uiFont(9.0f));
+    const float frequencies[] { 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000 };
+    for (float frequency : frequencies)
+    {
+        const float x = frequencyToX(frequency);
+        g.setColour(border.withAlpha(0.65f));
+        g.drawVerticalLine(static_cast<int>(x), plot.getY(), plot.getBottom());
+        const auto label = frequency >= 1000.0f
+            ? juce::String(frequency / 1000.0f, frequency >= 10000.0f ? 0 : 1) + "k"
+            : juce::String(static_cast<int>(frequency));
+        g.setColour(muted);
+        g.drawText(label, static_cast<int>(x - 22.0f), static_cast<int>(plot.getBottom() + 5.0f),
+                   44, 14, juce::Justification::centred);
+    }
+    for (int db = -18; db <= 18; db += 6)
+    {
+        const float y = gainToY(static_cast<float>(db));
+        g.setColour(db == 0 ? muted.withAlpha(0.8f) : border.withAlpha(0.55f));
+        g.drawHorizontalLine(static_cast<int>(y), plot.getX(), plot.getRight());
+        g.setColour(muted);
+        g.drawText(juce::String(db), 5, static_cast<int>(y - 7.0f), 36, 14,
+                   juce::Justification::centredRight);
+    }
+
+    auto& parameters = state();
+    const auto value = [&parameters](const juce::String& id)
+    {
+        return parameters.getRawParameterValue(id)->load();
+    };
+    juce::Path response;
+    for (int sample = 0; sample <= 240; ++sample)
+    {
+        const float proportion = static_cast<float>(sample) / 240.0f;
+        const float frequency = 20.0f * std::pow(1000.0f, proportion);
+        float responseDb = 0.0f;
+        for (int band = 0; band < 8; ++band)
+        {
+            const auto prefix = "eqBand" + juce::String(band + 1);
+            if (value(prefix + "Enabled") < 0.5f)
+                continue;
+            const float centre = value(prefix + "Freq");
+            const float gain = value(prefix + "Gain");
+            const float q = std::max(0.3f, value(prefix + "Q"));
+            const int type = juce::roundToInt(value(prefix + "Type"));
+            const float octaveDistance = std::log2(std::max(0.0001f, frequency / centre));
+            if (band == 0 && type == 0)
+            {
+                if (frequency < centre)
+                    responseDb -= std::min(36.0f, (1.0f + juce::roundToInt(value(prefix + "Slope"))) * 12.0f
+                                                      * std::max(0.0f, -octaveDistance));
+            }
+            else if (band == 7 && type == 1)
+            {
+                if (frequency > centre)
+                    responseDb -= std::min(36.0f, (1.0f + juce::roundToInt(value(prefix + "Slope"))) * 12.0f
+                                                      * std::max(0.0f, octaveDistance));
+            }
+            else if (band == 0 && type == 1)
+                responseDb += gain / (1.0f + std::pow(frequency / centre, 4.0f));
+            else if (band == 7 && type == 0)
+                responseDb += gain / (1.0f + std::pow(centre / frequency, 4.0f));
+            else
+            {
+                const float width = std::max(0.18f, 1.15f / q);
+                responseDb += gain * std::exp(-0.5f * std::pow(octaveDistance / width, 2.0f));
+            }
+        }
+        const float x = plot.getX() + proportion * plot.getWidth();
+        const float y = gainToY(juce::jlimit(-18.0f, 18.0f, responseDb));
+        if (sample == 0) response.startNewSubPath(x, y);
+        else response.lineTo(x, y);
+    }
+    g.setColour(juce::Colour(0xD5, 0xD8, 0xE2));
+    g.strokePath(response, juce::PathStrokeType(2.0f));
+
+    for (int band = 0; band < 8; ++band)
+    {
+        const auto prefix = "eqBand" + juce::String(band + 1);
+        const float frequency = value(prefix + "Freq");
+        const float gain = value(prefix + "Gain");
+        const int type = juce::roundToInt(value(prefix + "Type"));
+        const bool cut = (band == 0 && type == 0) || (band == 7 && type == 1);
+        const float x = frequencyToX(frequency);
+        const float y = gainToY(cut ? 0.0f : gain);
+        const bool enabled = value(prefix + "Enabled") > 0.5f;
+        g.setColour(enabled ? juce::Colour(0xC9, 0xCC, 0xD8) : muted);
+        g.fillEllipse(x - (band == selectedBand ? 6.0f : 4.0f),
+                      y - (band == selectedBand ? 6.0f : 4.0f),
+                      band == selectedBand ? 12.0f : 8.0f,
+                      band == selectedBand ? 12.0f : 8.0f);
+        if (band == selectedBand)
+        {
+            g.setColour(text);
+            g.drawEllipse(x - 9.0f, y - 9.0f, 18.0f, 18.0f, 1.0f);
+        }
+    }
+}
+
+void OSREQGraph::mouseDown(const juce::MouseEvent& event)
+{
+    int nearest = 0;
+    float nearestDistance = std::numeric_limits<float>::max();
+    for (int band = 0; band < 8; ++band)
+    {
+        const auto prefix = "eqBand" + juce::String(band + 1);
+        const float frequency = state().getRawParameterValue(prefix + "Freq")->load();
+        const float x = frequencyToX(frequency);
+        const float gain = state().getRawParameterValue(prefix + "Gain")->load();
+        const int type = juce::roundToInt(state().getRawParameterValue(prefix + "Type")->load());
+        const bool cut = (band == 0 && type == 0) || (band == 7 && type == 1);
+        const float y = gainToY(cut ? 0.0f : gain);
+        const float distance = std::hypot(event.position.x - x, event.position.y - y);
+        if (distance < nearestDistance) { nearestDistance = distance; nearest = band; }
+    }
+    selectedBand = nearest;
+    if (onBandSelected) onBandSelected(selectedBand);
+    mouseDrag(event);
+    repaint();
+}
+
+void OSREQGraph::mouseDrag(const juce::MouseEvent& event)
+{
+    const auto prefix = "eqBand" + juce::String(selectedBand + 1);
+    const float frequency = xToFrequency(event.position.x);
+    if (auto* parameter = state().getParameter(prefix + "Freq"))
+    {
+        parameter->beginChangeGesture();
+        parameter->setValueNotifyingHost(parameter->convertTo0to1(frequency));
+        parameter->endChangeGesture();
+    }
+    const int type = juce::roundToInt(state().getRawParameterValue(prefix + "Type")->load());
+    const bool cut = (selectedBand == 0 && type == 0) || (selectedBand == 7 && type == 1);
+    if (!cut)
+        if (auto* parameter = state().getParameter(prefix + "Gain"))
+        {
+            parameter->beginChangeGesture();
+            parameter->setValueNotifyingHost(parameter->convertTo0to1(yToGain(event.position.y)));
+            parameter->endChangeGesture();
+        }
+    repaint();
+}
+
 OrchestralStudioReverbAudioProcessorEditor::OrchestralStudioReverbAudioProcessorEditor(
     OrchestralStudioReverbAudioProcessor& p)
-    : AudioProcessorEditor(&p), processor(p)
+    : AudioProcessorEditor(&p), processor(p), eqGraph(p)
 {
     title.setText("ORCHESTRAL STUDIO REVERB", juce::dontSendNotification);
     title.setFont(uiFont(18.0f, true));
