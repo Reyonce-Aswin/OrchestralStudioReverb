@@ -18,7 +18,7 @@ public:
         float frequency = 1000.0f;
         float gainDb = 0.0f;
         float q = 0.7071f;
-        int slope = 1; // 0..3 = 12, 24, 36, 48 dB/oct for cut filters
+        int slope = 1; // 0..3 = 6, 12, 18, 24 dB/oct for cut filters
         bool enabled = false;
     };
 
@@ -51,9 +51,11 @@ public:
         if (!prepared || index < 0 || index >= static_cast<int>(filters.size()))
             return;
 
-        const auto stageCount = parameters.type == Type::LowCut || parameters.type == Type::HighCut
-            ? std::clamp(parameters.slope + 1, 1, 4) : 1;
-        const auto stageQs = butterworthQs[static_cast<std::size_t>(stageCount - 1)];
+        const bool isCut = parameters.type == Type::LowCut || parameters.type == Type::HighCut;
+        const int slopeIndex = std::clamp(parameters.slope, 0, 3);
+        const int stageCount = isCut ? (slopeIndex == 0 || slopeIndex == 2 ? 1 : (slopeIndex == 1 ? 1 : 2)) : 1;
+        const bool addFirstOrderStage = isCut && (slopeIndex == 0 || slopeIndex == 2);
+        const auto stageQs = butterworthQs[static_cast<std::size_t>(std::clamp(stageCount - 1, 0, 3))];
         const float resonance = std::clamp(parameters.q / 0.7071f, 0.5f, 2.5f);
         const float frequency = std::clamp(parameters.frequency, 20.0f,
                                             static_cast<float>(sampleRate * 0.45));
@@ -62,12 +64,17 @@ public:
         for (int stage = 0; stage < 4; ++stage)
         {
             Coeff target {};
-            if (parameters.enabled && stage < stageCount)
+            if (parameters.enabled && stage < stageCount + (addFirstOrderStage ? 1 : 0))
             {
-                const float q = (parameters.type == Type::LowCut || parameters.type == Type::HighCut)
-                    ? std::clamp(stageQs[static_cast<std::size_t>(stage)] * resonance, 0.25f, 3.0f)
-                    : std::clamp(parameters.q, 0.1f, 12.0f);
-                target = makeCoefficients(parameters.type, frequency, parameters.gainDb, q);
+                if (addFirstOrderStage && stage == stageCount)
+                    target = makeFirstOrderCoefficients(parameters.type, frequency);
+                else
+                {
+                    const float q = isCut
+                        ? std::clamp(stageQs[static_cast<std::size_t>(stage)] * resonance, 0.25f, 3.0f)
+                        : std::clamp(parameters.q, 0.1f, 12.0f);
+                    target = makeCoefficients(parameters.type, frequency, parameters.gainDb, q);
+                }
             }
 
             for (auto& channel : filters[static_cast<std::size_t>(index)][static_cast<std::size_t>(stage)])
@@ -120,6 +127,15 @@ private:
         {{ 0.51763809f, 0.70710678f, 1.9318517f, 0.0f }},
         {{ 0.50979558f, 0.60134489f, 0.89997622f, 2.5629154f }}
     }};
+
+    Coeff makeFirstOrderCoefficients(Type type, float frequency) const noexcept
+    {
+        const float k = std::tan(3.14159265358979323846f * frequency / static_cast<float>(sampleRate));
+        const float norm = 1.0f / (1.0f + k);
+        if (type == Type::LowCut)
+            return { norm, -norm, 0.0f, (k - 1.0f) * norm, 0.0f };
+        return { k * norm, k * norm, 0.0f, (k - 1.0f) * norm, 0.0f };
+    }
 
     Coeff makeCoefficients(Type type, float frequency, float gainDb, float q) const noexcept
     {
