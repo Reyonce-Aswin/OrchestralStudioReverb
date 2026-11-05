@@ -651,9 +651,11 @@ void OrchestralStudioReverbAudioProcessorEditor::updateEQBandTypeControls()
     const auto prefix = "eqBand" + juce::String(selectedEQBand + 1);
     const int type = juce::roundToInt(state.getRawParameterValue(prefix + "Type")->load());
     const bool cut = (selectedEQBand == 0 && type == 0) || (selectedEQBand == 7 && type == 1);
+    const bool shelf = (selectedEQBand == 0 && type == 1) || (selectedEQBand == 7 && type == 0);
     eqGain.setEnabled(!cut);
     eqGainLabel.setText(cut ? "GAIN (N/A FOR CUT)" : "GAIN", juce::dontSendNotification);
-    eqQLabel.setText(cut ? "RESONANCE" : "Q", juce::dontSendNotification);
+    eqQLabel.setText(cut ? "RESONANCE" : (shelf ? "SHELF SLOPE" : "Q"),
+                     juce::dontSendNotification);
     eqTypeBox.setVisible(showingEQ && (selectedEQBand == 0 || selectedEQBand == 7));
     eqTypeLabel.setVisible(showingEQ && (selectedEQBand == 0 || selectedEQBand == 7));
     eqSlopeBox.setVisible(showingEQ && cut);
