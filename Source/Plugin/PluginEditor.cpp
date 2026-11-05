@@ -212,6 +212,7 @@ OrchestralStudioReverbAudioProcessorEditor::OrchestralStudioReverbAudioProcessor
     auto changeLayout = [this](OrchestraLayoutComponent::Layout layout)
     {
         stageMap.setLayout(layout);
+        lastDisplayedStageSelection = stageMap.getSelectedSection();
         setChoiceParameter(processor.getParameters(), "stageLayout", getLayoutChoiceIndex(layout));
         const auto& choices = dynamic_cast<juce::AudioParameterChoice*>(
             processor.getParameters().getParameter("stagePosition"))->choices;
@@ -283,6 +284,7 @@ OrchestralStudioReverbAudioProcessorEditor::OrchestralStudioReverbAudioProcessor
     stageMap.onSelectionChanged = [this](const juce::String& sectionName)
     {
         stagePositionLabel.setText("SELECTED: " + sectionName.toUpperCase(), juce::dontSendNotification);
+        lastDisplayedStageSelection = stageMap.getSelectedSection();
         if (auto* choice = dynamic_cast<juce::AudioParameterChoice*>(
                 processor.getParameters().getParameter("stagePosition")))
         {
@@ -296,6 +298,7 @@ OrchestralStudioReverbAudioProcessorEditor::OrchestralStudioReverbAudioProcessor
     const int savedLayout = juce::jlimit(0, 3, juce::roundToInt(
         processor.getParameters().getRawParameterValue("stageLayout")->load()));
     stageMap.setLayout(static_cast<OrchestraLayoutComponent::Layout>(savedLayout));
+    lastDisplayedStageSelection = stageMap.getSelectedSection();
     selectorTitle.setText(stageMap.getTitle(), juce::dontSendNotification);
     syncStageSelectionFromHost();
     updateLayoutButtons();
@@ -407,6 +410,7 @@ void OrchestralStudioReverbAudioProcessorEditor::syncStageSelectionFromHost()
     if (stageMap.getLayout() != layout)
     {
         stageMap.setLayout(layout);
+        lastDisplayedStageSelection = stageMap.getSelectedSection();
         selectorTitle.setText(stageMap.getTitle(), juce::dontSendNotification);
         updateLayoutButtons();
     }
@@ -421,8 +425,13 @@ void OrchestralStudioReverbAudioProcessorEditor::syncStageSelectionFromHost()
             dynamic_cast<juce::AudioParameterChoice*>(parameter)->choices, name);
         if (hostChoice >= 0 && currentChoice != hostChoice)
             stageMap.setSelectedSection(name);
-        stagePositionLabel.setText("SELECTED: " + stageMap.getSelectedSection().toUpperCase(),
-                                   juce::dontSendNotification);
+        const auto selected = stageMap.getSelectedSection();
+        if (selected != lastDisplayedStageSelection)
+        {
+            lastDisplayedStageSelection = selected;
+            stagePositionLabel.setText("SELECTED: " + selected.toUpperCase(),
+                                       juce::dontSendNotification);
+        }
     }
 }
 
