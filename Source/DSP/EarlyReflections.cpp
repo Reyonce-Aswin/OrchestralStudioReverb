@@ -93,7 +93,6 @@ void EarlyReflections::processSample(float inputLeft, float inputRight,
 
     float left = 0.0f;
     float right = 0.0f;
-    const float preDelaySamples = preDelayMs * 0.001f * static_cast<float>(sampleRate);
 
     for (std::size_t tap = 0; tap < kTapCount; ++tap)
     {
@@ -119,6 +118,5 @@ void EarlyReflections::processSample(float inputLeft, float inputRight,
     if (++writeIndex == leftBuffer.size())
         writeIndex = 0;
 
-    (void) preDelaySamples; // Kept separate above for readability of the control model.
 }
 } // namespace orchestral::dsp
