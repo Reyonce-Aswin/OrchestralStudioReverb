@@ -141,11 +141,6 @@ private:
  static void meter(juce::Graphics&g,int x,int y,int w,int h,float value)
  {for(int i=0;i<48;++i){float xx=x+i*(w/48.0f);g.setColour(i<48*value?blue.withAlpha(0.9f):line.withAlpha(0.6f));g.fillRect(xx,float(y),w/48.0f-1.0f,float(h));}}
  static float standardScale(juce::Rectangle<float> r)
- {
-  constexpr float maxRadius=388.0f*1.6f;
-  return juce::jmin(r.getWidth()/(2.0f*maxRadius),r.getHeight()/maxRadius);
- }
- static float standardScale(juce::Rectangle<float> r)
  { constexpr float maxRadius=388.0f*1.6f; return juce::jmin(r.getWidth()/(2.0f*maxRadius),r.getHeight()/maxRadius); }
  static float juceAngle(float degrees) { return juce::degreesToRadians(90.0f-degrees); }
  static float shiftedEdge(float degrees,float radius,bool isStart,bool gap)
@@ -182,7 +177,8 @@ private:
   const juce::String lines[2]={s.line1,s.line2}; const int count=juce::String(s.line2).isEmpty()?1:2;
   float size=12.0f; juce::Font font=standardFont(size);
   auto widthOf=[&](const juce::String& t,const juce::Font& f){juce::GlyphArrangement ga;ga.addLineOfText(f,t,0.0f,0.0f);return juce::jmax(float(f.getStringWidth(t)),float(ga.getBoundingBox(0,-1,true).getWidth()));};
-  const float chordWidth=2.0f*radius*float(std::sin(std::abs(juce::degreesToRadians(s.from-s.to))*0.5f))-8.0f;\n   const float localWidth=juce::jmax(12.0f,chordWidth);
+  const float chordWidth=2.0f*radius*float(std::sin(std::abs(juce::degreesToRadians(s.from-s.to))*0.5f))-8.0f;
+   const float localWidth=juce::jmax(12.0f,chordWidth);
   auto maxLineWidth=[&](){float w=0.0f;for(int i=0;i<count;++i)w=juce::jmax(w,float(widthOf(lines[i],font)));return w;};
   while(maxLineWidth()>localWidth&&size>9.0f){size=juce::jmax(9.0f,size-0.5f);font=standardFont(size);}
   float h=font.getHeight()*float(count);
