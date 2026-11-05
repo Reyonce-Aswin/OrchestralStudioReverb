@@ -616,6 +616,7 @@ void OrchestralStudioReverbAudioProcessorEditor::rebuildEQAttachments()
 
     auto& state = processor.getParameters();
     const auto prefix = "eqBand" + juce::String(selectedEQBand + 1);
+    eqQ.setRange(0.3, (selectedEQBand == 0 || selectedEQBand == 7) ? 2.0 : 8.0, 0.01);
     eqFrequencyAttachment = std::make_unique<Attachment>(state, prefix + "Freq", eqFrequency);
     eqGainAttachment = std::make_unique<Attachment>(state, prefix + "Gain", eqGain);
     eqQAttachment = std::make_unique<Attachment>(state, prefix + "Q", eqQ);
