@@ -8,6 +8,9 @@ namespace
 const juce::Colour bg {0x0F,0x11,0x1A}, panel {0x14,0x17,0x22}, fill {0x17,0x1A,0x26};
 const juce::Colour line {0x42,0x49,0x5C}, ink {0xEE,0xF0,0xF7}, muted {0xAAB2C4};
 const juce::Colour blue {0x8D,0xB4,0xFF}, selected {0x25,0x34,0x5E};
+const juce::Colour knobTrack {0x3A,0x3E,0x4C}, knobValue {0xE8,0xEA,0xF0};
+const juce::Colour knobName {0xD8,0xDB,0xE6}, valueReadout {0x8B,0x90,0xA3};
+const juce::Colour sliderTrack {0x2C,0x2F,0x3C}, sliderFill {0xC9,0xCC,0xD8};
 constexpr float pi=3.14159265358979323846f;
 struct Sector { const char* name; int ring; float from,to; const char* label; };
 struct StandardSector { const char* name; float inner, outer, from, to; bool gapStart, gapEnd; const char* line1; const char* line2; };
@@ -68,7 +71,7 @@ public:
   drawText(g,"CLASSICAL / EUROPEAN\n(ANTIPHONAL)",144,100,113,38,9,ink,juce::Justification::centred);
   g.setColour(line); g.drawLine(28,154,258,154);
   drawText(g,"ROOM",29,164,200,18,10,ink);
-  knob(g,90,222,"ROOM SIZE","1.20 ×"); knob(g,203,222,"PRE-DELAY","54 ms");
+  knob(g,90,222,"ROOM SIZE",juce::String("1.20 ")+juce::String::charToString(0x00D7)); knob(g,203,222,"PRE-DELAY","54 ms");
   g.setColour(line); g.drawLine(28,282,258,282);
   drawText(g,"REVERB TIME",29,291,200,18,10,ink);
   knob(g,145,360,"DECAY","2.80 s");
@@ -76,14 +79,14 @@ public:
   drawText(g,juce::String("SELECTED: ")+selectedName.toUpperCase(),770,69,200,18,10,blue,juce::Justification::centredRight);
   drawStage(g,stage.withTrimmedLeft(14).withTrimmedRight(14).withTrimmedTop(39).withTrimmedBottom(12));
   auto bottom=juce::Rectangle<float>(14,468,972,218); rounded(g,bottom,line,panel);
-  drawText(g,"DECAY",34,480,110,16,10,ink);
+  drawSpacedHeading(g,"DECAY",34,480,110,16,10.0f,knobName);
   knob(g,92,538,"LOW DECAY","2.80 s",0.78f); knob(g,195,538,"HIGH DECAY","4.20 s",0.87f);
   knob(g,298,538,"CROSSOVER","1.20 kHz",0.55f); knob(g,401,538,"DAMPING","35 %",0.72f);
   g.setColour(line); g.drawLine(465,482,465,592);
-  drawText(g,"MODULATION",482,480,140,16,10,ink);
+  drawSpacedHeading(g,"MODULATION",482,480,140,16,10.0f,knobName);
   knob(g,550,538,"DEPTH","12 %",0.42f); knob(g,652,538,"RATE","0.30 Hz",0.68f);
   g.setColour(line); g.drawLine(715,482,715,592);
-  drawText(g,"STEREO",734,480,100,16,10,ink);
+  drawSpacedHeading(g,"STEREO",734,480,100,16,10.0f,knobName);
   knob(g,800,538,"WIDTH","120 %",0.8f); knob(g,905,538,"DIFFUSION","75 %",0.7f);
   g.setColour(line); g.drawLine(28,600,972,600);
   drawText(g,"DRY / WET",34,609,120,17,10,ink);
@@ -121,25 +124,53 @@ private:
  static void drawText(juce::Graphics&g,const juce::String&s,int x,int y,int w,int h,float size,juce::Colour c,juce::Justification j=juce::Justification::centredLeft){g.setColour(c);g.setFont(juce::Font(size));g.drawFittedText(s,{x,y,w,h},j,2);}
  static void knob(juce::Graphics&g,float cx,float cy,const juce::String&name,const juce::String&value,float amount=0.68f)
  {
-  constexpr float radius=19; juce::Path arc; float start=juce::degreesToRadians(135.0f),end=juce::degreesToRadians(405.0f);
-  for(int i=0;i<=48;++i){float a=start+(end-start)*i/48.0f;juce::Point<float> p(cx+std::cos(a)*radius,cy+std::sin(a)*radius);if(i==0)arc.startNewSubPath(p);else arc.lineTo(p);}
-  g.setColour(line);g.strokePath(arc,juce::PathStrokeType(2));
-  juce::Path active; for(int i=0;i<=int(48*amount);++i){float a=start+(end-start)*i/48.0f;juce::Point<float>p(cx+std::cos(a)*radius,cy+std::sin(a)*radius);if(i==0)active.startNewSubPath(p);else active.lineTo(p);}
-  g.setColour(blue);g.strokePath(active,juce::PathStrokeType(2.2f));
-  float a=start+(end-start)*amount;g.setColour(ink);g.fillEllipse(cx+std::cos(a)*15-2,cy+std::sin(a)*15-2,4,4);
-  drawText(g,name,int(cx-48),int(cy+24),96,13,8,muted,juce::Justification::centred);
-  drawText(g,value,int(cx-48),int(cy+38),96,15,10,ink,juce::Justification::centred);
+  constexpr float radius=19.0f;
+  const float start=juce::degreesToRadians(135.0f),end=juce::degreesToRadians(405.0f);
+  juce::Path trackArc,valueArc;
+  trackArc.addCentredArc(cx,cy,radius,radius,0.0f,start,end,true);
+  const float angle=start+(end-start)*juce::jlimit(0.0f,1.0f,amount);
+  valueArc.addCentredArc(cx,cy,radius,radius,0.0f,start,angle,true);
+  const juce::PathStrokeType stroke(2.2f,juce::PathStrokeType::curved,juce::PathStrokeType::rounded);
+  g.setColour(knobTrack);g.strokePath(trackArc,stroke);
+  g.setColour(knobValue);g.strokePath(valueArc,stroke);
+  const juce::Point<float> pointer(std::sin(angle),-std::cos(angle));
+  g.setColour(juce::Colours::white);
+  g.drawLine(juce::Line<float>(juce::Point<float>(cx,cy)+pointer*8.0f,juce::Point<float>(cx,cy)+pointer*16.5f),2.0f);
+  drawText(g,name,int(cx-48),int(cy+24),96,13,9,knobName,juce::Justification::centred);
+  drawText(g,value,int(cx-48),int(cy+38),96,15,10,valueReadout,juce::Justification::centred);
  }
  static void slider(juce::Graphics&g,int x,int y,int w,const juce::String&name,float v,const juce::String&value)
  {
-  drawText(g,name,x-48,y-8,42,18,9,ink,juce::Justification::centredRight);
-  g.setColour(line);g.fillRoundedRectangle(float(x),float(y),float(w),4,2);
-  g.setColour(blue);g.fillRoundedRectangle(float(x),float(y),float(w)*v,4,2);
-  g.setColour(ink);g.fillEllipse(float(x)+w*v-5,float(y)-3,10,10);
-  drawText(g,value,x+w+9,y-8,55,18,9,ink);
+  drawText(g,name,x-48,y-8,42,18,9,knobName,juce::Justification::centredRight);
+  g.setColour(sliderTrack);g.fillRoundedRectangle(float(x),float(y),float(w),4,2);
+  g.setColour(sliderFill);g.fillRoundedRectangle(float(x),float(y),float(w)*v,4,2);
+  g.setColour(juce::Colours::white);g.fillEllipse(float(x)+w*v-5,float(y)-3,10,10);
+  drawText(g,value,x+w+9,y-8,55,18,9,valueReadout);
  }
  static void meter(juce::Graphics&g,int x,int y,int w,int h,float value)
- {for(int i=0;i<48;++i){float xx=x+i*(w/48.0f);g.setColour(i<48*value?blue.withAlpha(0.9f):line.withAlpha(0.6f));g.fillRect(xx,float(y),w/48.0f-1.0f,float(h));}}
+ {
+  constexpr int segments=48;const float segWidth=float(w)/float(segments);
+  for(int i=0;i<segments;++i)
+  {
+   const bool active=float(i)<float(segments)*value;
+   g.setColour(active?sliderFill:sliderTrack.withAlpha(0.9f));
+   g.fillRoundedRectangle(float(x)+float(i)*segWidth,float(y),juce::jmax(1.0f,segWidth-1.0f),float(h),1.0f);
+  }
+ }
+ static void drawSpacedHeading(juce::Graphics& g,const juce::String& text,int x,int y,int w,int h,float size,juce::Colour colour)
+ {
+  juce::Font font(size,juce::Font::bold);
+  float total=0.0f;
+  for(int i=0;i<text.length();++i)total+=font.getStringWidth(text.substring(i,i+1))+1.4f;
+  float cursor=float(x)+(float(w)-total)*0.5f;
+  g.setColour(colour);
+  for(int i=0;i<text.length();++i)
+  {
+   auto ch=text.substring(i,i+1);const float cw=font.getStringWidth(ch);
+   g.drawText(ch,juce::Rectangle<float>(cursor,float(y),cw+1.0f,float(h)),juce::Justification::centred,false);
+   cursor+=cw+1.4f;
+  }
+ }
  static float standardScale(juce::Rectangle<float> r)
  { constexpr float maxRadius=388.0f*1.6f; return juce::jmin(r.getWidth()/(2.0f*maxRadius),r.getHeight()/maxRadius); }
  static float juceAngle(float degrees) { return juce::degreesToRadians(90.0f-degrees); }
