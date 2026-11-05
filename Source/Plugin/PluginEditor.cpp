@@ -455,6 +455,42 @@ void OSREQGraph::mouseDown(const juce::MouseEvent& event)
     repaint();
 }
 
+void OSREQGraph::mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel)
+{
+    int nearest = -1;
+    float nearestDistance = 20.0f;
+    for (int band = 0; band < 8; ++band)
+    {
+        const auto prefix = "eqBand" + juce::String(band + 1);
+        const float frequency = state().getRawParameterValue(prefix + "Freq")->load();
+        const float gain = state().getRawParameterValue(prefix + "Gain")->load();
+        const float q = state().getRawParameterValue(prefix + "Q")->load();
+        const int type = juce::roundToInt(state().getRawParameterValue(prefix + "Type")->load());
+        const bool cut = (band == 0 && type == 0) || (band == 7 && type == 1);
+        const float y = gainToY(cut ? juce::jlimit(-12.0f, 12.0f, (q - 0.7071f) * 12.0f) : gain);
+        const float distance = std::hypot(event.position.x - frequencyToX(frequency), event.position.y - y);
+        if (distance < nearestDistance) { nearestDistance = distance; nearest = band; }
+    }
+    if (nearest < 0 || std::abs(wheel.deltaY) < 0.001f)
+        return;
+
+    selectedBand = nearest;
+    if (onBandSelected) onBandSelected(selectedBand);
+    const auto parameterID = "eqBand" + juce::String(selectedBand + 1) + "Q";
+    if (auto* parameter = state().getParameter(parameterID))
+    {
+        const float current = state().getRawParameterValue(parameterID)->load();
+        const float direction = wheel.deltaY > 0.0f ? 1.0f : -1.0f;
+        const float step = juce::jmax(0.01f, current * 0.06f);
+        const float next = juce::jlimit(0.3f, selectedBand == 0 || selectedBand == 7 ? 2.0f : 8.0f,
+                                        current + direction * step * juce::jmax(1.0f, std::abs(wheel.deltaY) * 4.0f));
+        parameter->beginChangeGesture();
+        parameter->setValueNotifyingHost(parameter->convertTo0to1(next));
+        parameter->endChangeGesture();
+    }
+    repaint();
+}
+
 void OSREQGraph::mouseDrag(const juce::MouseEvent& event)
 {
     const auto prefix = "eqBand" + juce::String(selectedBand + 1);
@@ -643,7 +679,7 @@ OrchestralStudioReverbAudioProcessorEditor::OrchestralStudioReverbAudioProcessor
         slider.setSliderStyle(juce::Slider::LinearHorizontal);
         slider.setRange(minimum, maximum, interval);
         if (skew > 0.0) slider.setSkewFactor(skew);
-        slider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 66, 20);
+        slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
         slider.setLookAndFeel(&controlLookAndFeel);
         slider.setColour(juce::Slider::textBoxTextColourId, text);
         slider.setColour(juce::Slider::textBoxBackgroundColourId, panel);
@@ -657,6 +693,16 @@ OrchestralStudioReverbAudioProcessorEditor::OrchestralStudioReverbAudioProcessor
     setupEQSlider(eqFrequency, eqFrequencyLabel, "FREQUENCY", 20.0, 20000.0, 0.1, 0.25);
     setupEQSlider(eqGain, eqGainLabel, "GAIN", -18.0, 18.0, 0.1, 0.0);
     setupEQSlider(eqQ, eqQLabel, "RESONANCE / Q", 0.3, 8.0, 0.01, 0.5);
+    setupEQSlider(eqMix, eqMixLabel, "EQ MIX", 0.0, 1.0, 0.001, 0.0);
+    for (auto* label : { &eqFrequencyValue, &eqGainValue, &eqQValue, &eqMixValue })
+    {
+        label->setFont(uiFont(11.0f));
+        label->setColour(juce::Label::textColourId, muted);
+        label->setJustificationType(juce::Justification::centred);
+        addAndMakeVisible(*label);
+    }
+    eqMixAttachment = std::make_unique<Attachment>(state, "eqMix", eqMix);
+    eqMix.onValueChange = [this] { updateEQValueLabels(); };
 
     eqTypeBox.setColour(juce::ComboBox::backgroundColourId, panel);
     eqTypeBox.setColour(juce::ComboBox::textColourId, text);
@@ -722,6 +768,7 @@ OrchestralStudioReverbAudioProcessorEditor::~OrchestralStudioReverbAudioProcesso
     eqFrequency.setLookAndFeel(nullptr);
     eqGain.setLookAndFeel(nullptr);
     eqQ.setLookAndFeel(nullptr);
+    eqMix.setLookAndFeel(nullptr);
 }
 
 
@@ -750,6 +797,10 @@ void OrchestralStudioReverbAudioProcessorEditor::rebuildEQAttachments()
     eqFrequencyAttachment = std::make_unique<Attachment>(state, prefix + "Freq", eqFrequency);
     eqGainAttachment = std::make_unique<Attachment>(state, prefix + "Gain", eqGain);
     eqQAttachment = std::make_unique<Attachment>(state, prefix + "Q", eqQ);
+    eqFrequency.onValueChange = [this] { updateEQValueLabels(); };
+    eqGain.onValueChange = [this] { updateEQValueLabels(); };
+    eqQ.onValueChange = [this] { updateEQValueLabels(); };
+    updateEQValueLabels();
     eqEnableAttachment = std::make_unique<ButtonAttachment>(state, prefix + "Enabled", eqEnableButton);
 
     eqTypeBox.clear(juce::dontSendNotification);
@@ -819,6 +870,11 @@ void OrchestralStudioReverbAudioProcessorEditor::setActiveView(bool showEQ)
     eqFrequency.setVisible(showEQ);
     eqGain.setVisible(showEQ);
     eqQ.setVisible(showEQ);
+    eqMix.setVisible(showEQ);
+    eqFrequencyValue.setVisible(showEQ);
+    eqGainValue.setVisible(showEQ);
+    eqQValue.setVisible(showEQ);
+    eqMixValue.setVisible(showEQ);
     eqFrequencyLabel.setVisible(showEQ);
     eqGainLabel.setVisible(showEQ);
     eqQLabel.setVisible(showEQ);
@@ -913,7 +969,13 @@ void OrchestralStudioReverbAudioProcessorEditor::resized()
         eqGainLabel.setBounds(26 + columnWidth, 545, columnWidth - 12, 14);
         eqGain.setBounds(26 + columnWidth, 560, columnWidth - 12, 50);
         eqQLabel.setBounds(26 + columnWidth * 2, 545, columnWidth - 12, 14);
-        eqQ.setBounds(26 + columnWidth * 2, 560, columnWidth - 12, 50);
+        eqQ.setBounds(26 + columnWidth * 2, 560, columnWidth - 12, 34);
+        eqMixLabel.setBounds(26 + columnWidth * 3, 545, columnWidth - 12, 14);
+        eqMix.setBounds(26 + columnWidth * 3, 560, columnWidth - 12, 34);
+        eqFrequencyValue.setBounds(26, 596, columnWidth - 12, 18);
+        eqGainValue.setBounds(26 + columnWidth, 596, columnWidth - 12, 18);
+        eqQValue.setBounds(26 + columnWidth * 2, 596, columnWidth - 12, 18);
+        eqMixValue.setBounds(26 + columnWidth * 3, 596, columnWidth - 12, 18);
         return;
     }
 
