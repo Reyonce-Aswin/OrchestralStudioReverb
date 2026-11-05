@@ -33,8 +33,7 @@ OrchestralStudioReverbAudioProcessor::createParameterLayout()
     const StringArray stageNames {
         "Piano", "Violin I", "Violin II", "Violas", "Celli", "Basses",
         "Piccolos", "Flutes", "Oboes", "Clarinets", "Bassoons", "Horns",
-        "Harp / Celeste", "Timpani / Untuned Percussion",
-        "Tubular Bells / Marimba, Xylo, Glockenspiel",
+        "Harp / Celeste", "Percussion", "Tuned Percussion",
         "Trumpets", "Tenor Trombones", "Bass Trombones", "Tuba"
     };
     layout.add(std::make_unique<AudioParameterChoice>(
