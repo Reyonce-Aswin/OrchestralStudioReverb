@@ -17,7 +17,11 @@ public:
     {
         float roomSize = 1.0f;
         float preDelayMs = 12.0f;
-        int stagePosition = 1; // Must match the Stage Position choice order.
+        int stagePosition = 1;
+        float stagePan = 0.0f;
+        float stageDepth = 0.5f;
+        float stageLevel = 1.0f;
+        bool useExplicitStagePosition = false;
     };
 
     void prepare(double sampleRate);
