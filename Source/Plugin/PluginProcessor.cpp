@@ -37,7 +37,7 @@ OrchestralStudioReverbAudioProcessor::createParameterLayout()
         "Harp / Celeste", "Percussion", "Tuned Percussion",
         "Trumpets", "Tenor Trombones", "Bass Trombones", "Tuba"
     };
-    const StringArray cutSlopeChoices { "12 dB/oct", "24 dB/oct", "36 dB/oct", "48 dB/oct" };
+    const StringArray cutSlopeChoices { "6 dB/oct", "12 dB/oct", "18 dB/oct", "24 dB/oct" };
     const StringArray lowTypeChoices { "Low Cut", "Low Shelf" };
     const StringArray highTypeChoices { "High Shelf", "High Cut" };
     const float eqFrequencies[8] { 30.0f, 120.0f, 300.0f, 700.0f, 1500.0f, 3500.0f, 7000.0f, 16000.0f };
