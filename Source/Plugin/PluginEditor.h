@@ -12,6 +12,8 @@ public:
     void drawLinearSlider(juce::Graphics&, int x, int y, int width, int height,
                           float sliderPos, float minSliderPos, float maxSliderPos,
                           juce::Slider::SliderStyle, juce::Slider&) override;
+    void drawButtonText(juce::Graphics&, juce::TextButton&,
+                        bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override;
 };
 
 class OrchestralStudioReverbAudioProcessorEditor final : public juce::AudioProcessorEditor,
