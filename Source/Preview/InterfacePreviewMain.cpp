@@ -167,22 +167,42 @@ private:
   p.addCentredArc(c.x,c.y,ri,ri,0.0f,ei,si,false);
   p.closeSubPath(); return p;
  }
+ juce::Font standardFont(float size) const
+ {
+  juce::FontOptions opts; auto f=juce::Font(opts.withName("Inter").withHeight(size));
+  if(!f.getTypefaceName().containsIgnoreCase("Inter")) f=juce::Font(opts.withName("Arial").withHeight(size));
+  return f;
+ }
+ void fitStandardLabel(juce::Graphics& g,const StandardSector& s,const juce::Path& path,juce::Point<float> c,juce::Rectangle<float> r)
+ {
+  const float scale=standardScale(r),mid=(s.from+s.to)*0.5f;
+  const float radius=(s.inner+s.outer)*0.5f*1.6f*scale;
+  const float a=juce::degreesToRadians(mid);
+  const juce::Point<float> anchor(c.x+std::cos(a)*radius,c.y-std::sin(a)*radius);
+  const juce::String lines[2]={s.line1,s.line2}; const int count=juce::String(s.line2).isEmpty()?1:2;
+  float size=12.0f; juce::Font font=standardFont(size);
+  auto widthOf=[&](const juce::String& t,const juce::Font& f){juce::GlyphArrangement ga;ga.addLineOfText(f,t,0.0f,0.0f);return juce::jmax(f.getStringWidth(t),ga.getBoundingBox(0,-1,true).getWidth());};
+  const float localWidth=juce::jmax(12.0f,2.0f*radius*std::sin(std::abs(juce::degreesToRadians(s.from-s.to))*0.5f)-8.0f);
+  auto maxLineWidth=[&](){float w=0.0f;for(int i=0;i<count;++i)w=juce::jmax(w,widthOf(lines[i],font));return w;};
+  while(maxLineWidth()>localWidth&&size>9.0f){size=juce::jmax(9.0f,size-0.5f);font=standardFont(size);}
+  float h=font.getHeight()*float(count);
+  juce::Rectangle<float> box(anchor.x-localWidth*0.5f,anchor.y-h*0.5f,localWidth,h);
+  auto cornersInside=[&](){return path.contains(box.getTopLeft())&&path.contains(box.getTopRight())&&path.contains(box.getBottomLeft())&&path.contains(box.getBottomRight());};
+  while(!cornersInside()&&size>9.0f){size=juce::jmax(9.0f,size-0.5f);font=standardFont(size);h=font.getHeight()*float(count);box={anchor.x-localWidth*0.5f,anchor.y-h*0.5f,localWidth,h};}
+  if(!cornersInside())juce::Logger::writeToLog("Standard label outside sector: "+juce::String(s.name));
+  g.setColour(ink);g.setFont(font);
+  for(int i=0;i<count;++i)g.drawText(lines[i],box.getX(),box.getY()+float(i)*font.getHeight(),box.getWidth(),font.getHeight(),juce::Justification::centred,false);
+ }
  template<size_t N> void drawStandardSectors(juce::Graphics& g,const std::array<StandardSector,N>& sectors,juce::Point<float> c,juce::Rectangle<float> r)
  {
-  const float scale=standardScale(r);
-  for(const auto& s:sectors)
-  {
-   auto path=standardSectorPath(s,c,r);
-   const bool sel=juce::String(s.name)==selectedName;
-   const bool hover=juce::String(s.name)==hoveredName&&!sel;
-   g.setColour(sel?selected:(hover?juce::Colour(0x22,0x28,0x42):fill));g.fillPath(path);
-   g.setColour(sel?blue:ink);g.strokePath(path,juce::PathStrokeType(sel?2.5f:2.0f));
-   const float a=juce::degreesToRadians((s.from+s.to)*0.5f);
-   const float radius=(s.inner+s.outer)*0.5f*1.6f*scale;
-   const float x=c.x+std::cos(a)*radius,y=c.y-std::sin(a)*radius;
-   const float arcWidth=juce::jmax(38.0f,2.0f*radius*std::sin(std::abs(juce::degreesToRadians(s.from-s.to))*0.5f)-10.0f);
-   drawText(g,s.label,int(x-arcWidth*0.5f),int(y-11),int(arcWidth),22,14.0f,sel?juce::Colours::white:ink,juce::Justification::centred);
-  }
+  std::array<juce::Path,N> paths;
+  for(size_t i=0;i<N;++i){paths[i]=standardSectorPath(sectors[i],c,r);g.setColour(fill);g.fillPath(paths[i]);}
+  const juce::PathStrokeType outline(2.0f,juce::PathStrokeType::curved,juce::PathStrokeType::rounded);
+  for(size_t i=0;i<N;++i){g.setColour(ink);g.strokePath(paths[i],outline);}
+  auto state=[&](const juce::String& name,juce::Colour colour,float width){for(size_t i=0;i<N;++i)if(juce::String(sectors[i].name)==name){g.setColour(colour);g.fillPath(paths[i]);g.setColour(blue);g.strokePath(paths[i],juce::PathStrokeType(width,juce::PathStrokeType::curved,juce::PathStrokeType::rounded));}};
+  if(hoveredName.isNotEmpty()&&hoveredName!=selectedName)state(hoveredName,juce::Colour(0x22,0x28,0x42),2.0f);
+  if(selectedName.isNotEmpty())state(selectedName,selected,2.5f);
+  for(size_t i=0;i<N;++i)fitStandardLabel(g,sectors[i],paths[i],c,r);
  }
  static juce::Path sectorPath(const Sector&s,juce::Point<float>c,juce::Rectangle<float>r)
  {
