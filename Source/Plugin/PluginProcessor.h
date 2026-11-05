@@ -34,6 +34,7 @@ public:
 private:
     orchestral::dsp::FDNReverb reverb;
     juce::AudioProcessorValueTreeState parameters;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> drySmoother;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> wetSmoother;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OrchestralStudioReverbAudioProcessor)
 };
