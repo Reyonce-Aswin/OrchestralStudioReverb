@@ -132,6 +132,10 @@ OrchestralStudioReverbAudioProcessorEditor::OrchestralStudioReverbAudioProcessor
     presetLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(presetLabel);
 
+    selectorTitle.setFont(uiFont(10.0f, true));
+    selectorTitle.setColour(juce::Label::textColourId, muted);
+    addAndMakeVisible(selectorTitle);
+
     stagePositionLabel.setFont(uiFont(10.0f));
     stagePositionLabel.setColour(juce::Label::textColourId, muted);
     stagePositionLabel.setJustificationType(juce::Justification::centredRight);
@@ -150,16 +154,20 @@ OrchestralStudioReverbAudioProcessorEditor::OrchestralStudioReverbAudioProcessor
     };
     setupLayoutButton(standardLayoutButton);
     setupLayoutButton(classicalLayoutButton);
-    standardLayoutButton.onClick = [this]
+    setupLayoutButton(chamberModernButton);
+    setupLayoutButton(chamberClassicalButton);
+
+    auto changeLayout = [this](OrchestraLayoutComponent::Layout layout)
     {
-        stageMap.setLayout(OrchestraLayoutComponent::Layout::Standard);
+        stageMap.setLayout(layout);
+        selectorTitle.setText(stageMap.getTitle(), juce::dontSendNotification);
+        stagePositionLabel.setText({}, juce::dontSendNotification);
         updateLayoutButtons();
     };
-    classicalLayoutButton.onClick = [this]
-    {
-        stageMap.setLayout(OrchestraLayoutComponent::Layout::Classical);
-        updateLayoutButtons();
-    };
+    standardLayoutButton.onClick = [changeLayout] { changeLayout(OrchestraLayoutComponent::Layout::Standard); };
+    classicalLayoutButton.onClick = [changeLayout] { changeLayout(OrchestraLayoutComponent::Layout::Classical); };
+    chamberModernButton.onClick = [changeLayout] { changeLayout(OrchestraLayoutComponent::Layout::ChamberModern); };
+    chamberClassicalButton.onClick = [changeLayout] { changeLayout(OrchestraLayoutComponent::Layout::ChamberClassical); };
 
     const auto setupSlider = [this](juce::Slider& slider, juce::Label& label,
                                     juce::Label& valueLabel, const juce::String& name)
@@ -216,6 +224,10 @@ OrchestralStudioReverbAudioProcessorEditor::OrchestralStudioReverbAudioProcessor
 
     stageMap.onSelectionChanged = [this](const juce::String& sectionName)
     {
+        stagePositionLabel.setText("SELECTED: " + sectionName.toUpperCase(), juce::dontSendNotification);
+        if (stageMap.getLayout() == OrchestraLayoutComponent::Layout::ChamberModern
+            || stageMap.getLayout() == OrchestraLayoutComponent::Layout::ChamberClassical)
+            return;
         if (auto* parameter = processor.getParameters().getParameter("stagePosition"))
         {
             if (auto* choice = dynamic_cast<juce::AudioParameterChoice*>(parameter))
@@ -230,6 +242,7 @@ OrchestralStudioReverbAudioProcessorEditor::OrchestralStudioReverbAudioProcessor
     stageMap.onLayoutChanged = [this](OrchestraLayoutComponent::Layout) { updateLayoutButtons(); };
 
     stageMap.setLayout(OrchestraLayoutComponent::Layout::Standard);
+    selectorTitle.setText(stageMap.getTitle(), juce::dontSendNotification);
     syncStageSelectionFromHost();
     updateLayoutButtons();
     startTimerHz(20);
@@ -244,17 +257,26 @@ OrchestralStudioReverbAudioProcessorEditor::~OrchestralStudioReverbAudioProcesso
         slider->setLookAndFeel(nullptr);
     standardLayoutButton.setLookAndFeel(nullptr);
     classicalLayoutButton.setLookAndFeel(nullptr);
+    chamberModernButton.setLookAndFeel(nullptr);
+    chamberClassicalButton.setLookAndFeel(nullptr);
 }
 
 void OrchestralStudioReverbAudioProcessorEditor::updateLayoutButtons()
 {
-    const bool standard = stageMap.getLayout() == OrchestraLayoutComponent::Layout::Standard;
-    standardLayoutButton.setColour(juce::TextButton::buttonColourId,
-                                   standard ? juce::Colour(0x25, 0x34, 0x5E) : panel);
-    classicalLayoutButton.setColour(juce::TextButton::buttonColourId,
-                                    standard ? panel : juce::Colour(0x25, 0x34, 0x5E));
-    standardLayoutButton.repaint();
-    classicalLayoutButton.repaint();
+    const auto active = juce::Colour(0x25, 0x34, 0x5E);
+    const auto layout = stageMap.getLayout();
+    const std::pair<juce::TextButton*, OrchestraLayoutComponent::Layout> buttons[] = {
+        { &standardLayoutButton, OrchestraLayoutComponent::Layout::Standard },
+        { &classicalLayoutButton, OrchestraLayoutComponent::Layout::Classical },
+        { &chamberModernButton, OrchestraLayoutComponent::Layout::ChamberModern },
+        { &chamberClassicalButton, OrchestraLayoutComponent::Layout::ChamberClassical }
+    };
+    for (const auto& entry : buttons)
+    {
+        entry.first->setColour(juce::TextButton::buttonColourId,
+                               layout == entry.second ? active : panel);
+        entry.first->repaint();
+    }
 }
 
 void OrchestralStudioReverbAudioProcessorEditor::updateValueLabels()
@@ -294,9 +316,12 @@ void OrchestralStudioReverbAudioProcessorEditor::resized()
     title.setBounds(margin, 14, 360, 34);
     presetLabel.setBounds(getWidth() / 2 - 100, 14, 200, 34);
 
-    standardLayoutButton.setBounds(236, 69, 112, 27);
-    classicalLayoutButton.setBounds(354, 69, 178, 27);
-    stagePositionLabel.setBounds(getWidth() - 420, 69, 394, 27);
+    selectorTitle.setBounds(26, 69, 220, 27);
+    standardLayoutButton.setBounds(250, 69, 112, 27);
+    classicalLayoutButton.setBounds(368, 69, 126, 27);
+    chamberModernButton.setBounds(500, 69, 132, 27);
+    chamberClassicalButton.setBounds(638, 69, 150, 27);
+    stagePositionLabel.setBounds(794, 69, getWidth() - 820, 27);
 
     const int controlsTop = getHeight() - 166;
     const int mapTop = 106;
@@ -328,6 +353,8 @@ void OrchestralStudioReverbAudioProcessorEditor::syncStageSelectionFromHost()
         const auto name = parameter->getCurrentValueAsText();
         if (stageMap.getSelectedParameterName() != name)
             stageMap.setSelectedSection(name);
+        if (stageMap.getLayout() == OrchestraLayoutComponent::Layout::Standard
+        || stageMap.getLayout() == OrchestraLayoutComponent::Layout::Classical)
         stagePositionLabel.setText("SELECTED: " + name.toUpperCase(), juce::dontSendNotification);
     }
 }
