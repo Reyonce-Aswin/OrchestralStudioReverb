@@ -14,7 +14,7 @@ OrchestralStudioReverbAudioProcessorEditor::OrchestralStudioReverbAudioProcessor
                                       const juce::String& text)
     {
         slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-        slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 76, 22);
+        slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 72, 22);
         slider.setColour(juce::Slider::rotarySliderFillColourId, bronze);
         slider.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour::fromRGB(72, 69, 64));
         slider.setColour(juce::Slider::thumbColourId, juce::Colour::fromRGB(232, 215, 183));
@@ -29,15 +29,21 @@ OrchestralStudioReverbAudioProcessorEditor::OrchestralStudioReverbAudioProcessor
 
     setupSlider(decay, decayLabel, "DECAY");
     setupSlider(damping, dampingLabel, "DAMPING");
+    setupSlider(roomSize, roomSizeLabel, "ROOM SIZE");
+    setupSlider(preDelay, preDelayLabel, "PRE-DELAY");
+    setupSlider(early, earlyLabel, "EARLY");
     setupSlider(dry, dryLabel, "DRY");
-    setupSlider(wet, wetLabel, "WET");
+    setupSlider(wet, wetLabel, "LATE WET");
 
     auto& state = processor.getParameters();
     decayAttachment = std::make_unique<Attachment>(state, "decay", decay);
     dampingAttachment = std::make_unique<Attachment>(state, "damping", damping);
+    roomSizeAttachment = std::make_unique<Attachment>(state, "roomSize", roomSize);
+    preDelayAttachment = std::make_unique<Attachment>(state, "preDelay", preDelay);
+    earlyAttachment = std::make_unique<Attachment>(state, "early", early);
     dryAttachment = std::make_unique<Attachment>(state, "dry", dry);
     wetAttachment = std::make_unique<Attachment>(state, "wet", wet);
-    setSize(760, 370);
+    setSize(1080, 370);
 }
 
 void OrchestralStudioReverbAudioProcessorEditor::paint(juce::Graphics& g)
@@ -49,22 +55,28 @@ void OrchestralStudioReverbAudioProcessorEditor::paint(juce::Graphics& g)
     g.fillRoundedRectangle(getLocalBounds().toFloat().reduced(18.0f).withTop(88.0f), 8.0f);
     g.setColour(juce::Colour::fromRGB(177, 163, 140));
     g.setFont(12.0f);
-    g.drawText("PARALLEL DRY / WET  /  FDN ENGINE", 34, getHeight() - 32,
-               getWidth() - 68, 18, juce::Justification::centredLeft);
+    g.drawText("EARLY REFLECTIONS  +  LATE FDN  /  PARALLEL RETURNS",
+               34, getHeight() - 32, getWidth() - 68, 18,
+               juce::Justification::centredLeft);
 }
 
 void OrchestralStudioReverbAudioProcessorEditor::resized()
 {
     title.setBounds(30, 22, getWidth() - 60, 34);
-    const int sectionWidth = (getWidth() - 100) / 4;
+    const int sectionWidth = (getWidth() - 60) / 7;
     const int x0 = 30;
     const int top = 112;
-    const int sliderSize = 132;
-    juce::Slider* sliders[] = { &decay, &damping, &dry, &wet };
-    juce::Label* labels[] = { &decayLabel, &dampingLabel, &dryLabel, &wetLabel };
-    for (int i = 0; i < 4; ++i)
+    const int sliderSize = 112;
+    juce::Slider* sliders[] = {
+        &decay, &damping, &roomSize, &preDelay, &early, &dry, &wet
+    };
+    juce::Label* labels[] = {
+        &decayLabel, &dampingLabel, &roomSizeLabel, &preDelayLabel,
+        &earlyLabel, &dryLabel, &wetLabel
+    };
+    for (int i = 0; i < 7; ++i)
     {
-        const int x = x0 + i * (sectionWidth + 10);
+        const int x = x0 + i * sectionWidth;
         labels[i]->setBounds(x, top, sectionWidth, 22);
         sliders[i]->setBounds(x + (sectionWidth - sliderSize) / 2, top + 24,
                               sliderSize, sliderSize);
