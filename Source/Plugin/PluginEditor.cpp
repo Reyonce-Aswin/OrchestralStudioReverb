@@ -239,13 +239,16 @@ void OSREQGraph::paint(juce::Graphics& g)
         return parameters.getRawParameterValue(id)->load();
     };
     const bool eqBypassed = value("eqBypass") > 0.5f;
-    const float displaySampleRate = static_cast<float>(std::max(1000.0, processor.getSampleRate()));
+    const double reportedSampleRate = processor.getSampleRate();
+    // The standalone preview can paint before an audio device is opened. In
+    // that case JUCE reports 0 Hz; use a realistic nominal rate, never 8 kHz,
+    // otherwise the 20 kHz graph wraps repeatedly above Nyquist.
+    const double sr = reportedSampleRate >= 22050.0 ? reportedSampleRate : 48000.0;
     // Draw a conventional combined EQ response: multiply the magnitude of
     // every active filter section (add their dB responses). Use double precision
     // and oversample the display so narrow Q peaks cannot alias into false spikes.
     juce::Path response;
     const int responseSamples = juce::jmax(4096, static_cast<int>(plot.getWidth()) * 8);
-    const double sr = std::max(8000.0, static_cast<double>(processor.getSampleRate()));
     const auto sectionDb = [](double b0, double b1, double b2,
                               double a1, double a2, double hz, double sampleRate)
     {
@@ -274,7 +277,7 @@ void OSREQGraph::paint(juce::Graphics& g)
             for (int band = 0; band < 8; ++band)
             {
                 const auto prefix = "eqBand" + juce::String(band + 1);
-                const bool enabled = value(prefix + "Enabled") > 0.5f || band == selectedBand;
+                const bool enabled = value(prefix + "Enabled") > 0.5f;
                 if (!enabled)
                     continue;
 
