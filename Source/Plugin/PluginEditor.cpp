@@ -105,6 +105,16 @@ void OSRControlLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, in
     }
 }
 
+void OSRControlLookAndFeel::drawButtonText(juce::Graphics& g, juce::TextButton& button,
+                                                     bool, bool)
+{
+    g.setColour(button.findColour(button.getToggleState()
+        ? juce::TextButton::textColourOnId : juce::TextButton::textColourOffId));
+    g.setFont(uiFont(9.5f, true));
+    g.drawFittedText(button.getButtonText(), button.getLocalBounds().reduced(4),
+                     juce::Justification::centred, 1);
+}
+
 OrchestralStudioReverbAudioProcessorEditor::OrchestralStudioReverbAudioProcessorEditor(
     OrchestralStudioReverbAudioProcessor& p)
     : AudioProcessorEditor(&p), processor(p)
@@ -134,7 +144,6 @@ OrchestralStudioReverbAudioProcessorEditor::OrchestralStudioReverbAudioProcessor
         button.setColour(juce::TextButton::textColourOffId, text);
         button.setColour(juce::TextButton::textColourOnId, text);
         button.setLookAndFeel(&controlLookAndFeel);
-        button.setFont(uiFont(9.5f, true));
         addAndMakeVisible(button);
     };
     setupLayoutButton(standardLayoutButton);
