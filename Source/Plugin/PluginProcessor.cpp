@@ -67,7 +67,7 @@ OrchestralStudioReverbAudioProcessor::createParameterLayout()
             layout.add(std::make_unique<AudioParameterChoice>(ParameterID { prefix + "Type", 1 },
                 "EQ " + String(band + 1) + " Type", StringArray { "Bell" }, 0));
         layout.add(std::make_unique<AudioParameterBool>(ParameterID { prefix + "Enabled", 1 },
-            "EQ " + String(band + 1) + " Enabled", false));
+            "EQ " + String(band + 1) + " Enabled", true));
     }
 
     layout.add(std::make_unique<AudioParameterBool>(ParameterID { "eqBypass", 1 },
