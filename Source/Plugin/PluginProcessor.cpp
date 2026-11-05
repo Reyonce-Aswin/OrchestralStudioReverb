@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "../DSP/StagePosition.h"
 
 OrchestralStudioReverbAudioProcessor::OrchestralStudioReverbAudioProcessor()
     : AudioProcessor(BusesProperties()
@@ -38,6 +39,9 @@ OrchestralStudioReverbAudioProcessor::createParameterLayout()
     };
     layout.add(std::make_unique<AudioParameterChoice>(
         ParameterID { "stagePosition", 1 }, "Stage Position", stageNames, 3));
+    layout.add(std::make_unique<AudioParameterChoice>(
+        ParameterID { "stageLayout", 1 }, "Stage Layout",
+        StringArray { "Full Modern", "Full Classical", "Chamber Modern", "Chamber Classical" }, 0));
     return layout;
 }
 
@@ -76,8 +80,12 @@ void OrchestralStudioReverbAudioProcessor::processBlock(juce::AudioBuffer<float>
     if (channels == 0)
         return;
 
-    const int stageIndex = juce::roundToInt(
-        parameters.getRawParameterValue("stagePosition")->load());
+    const int stageIndex = juce::jlimit(0, 18, juce::roundToInt(
+        parameters.getRawParameterValue("stagePosition")->load()));
+    const int layoutIndex = juce::jlimit(0, 3, juce::roundToInt(
+        parameters.getRawParameterValue("stageLayout")->load()));
+    const auto stage = orchestral::dsp::getStagePosition(
+        static_cast<orchestral::dsp::StageLayout>(layoutIndex), stageIndex);
 
     orchestral::dsp::FDNReverb::Parameters lateParameters;
     lateParameters.decaySeconds = parameters.getRawParameterValue("decay")->load();
@@ -85,12 +93,19 @@ void OrchestralStudioReverbAudioProcessor::processBlock(juce::AudioBuffer<float>
     lateParameters.inputGain = 0.45f;
     lateParameters.wetGain = 1.0f;
     lateParameters.stagePosition = stageIndex;
+    lateParameters.stagePan = stage.pan;
+    lateParameters.stageDepth = stage.depth;
+    lateParameters.useExplicitStagePosition = true;
     reverb.setParameters(lateParameters);
 
     orchestral::dsp::EarlyReflections::Parameters earlyParameters;
     earlyParameters.roomSize = parameters.getRawParameterValue("roomSize")->load();
     earlyParameters.preDelayMs = parameters.getRawParameterValue("preDelay")->load();
     earlyParameters.stagePosition = stageIndex;
+    earlyParameters.stagePan = stage.pan;
+    earlyParameters.stageDepth = stage.depth;
+    earlyParameters.stageLevel = stage.level;
+    earlyParameters.useExplicitStagePosition = true;
     earlyReflections.setParameters(earlyParameters);
 
     drySmoother.setTargetValue(parameters.getRawParameterValue("dry")->load());
