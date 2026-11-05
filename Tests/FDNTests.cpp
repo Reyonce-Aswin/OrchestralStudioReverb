@@ -41,6 +41,33 @@ static StereoEnergy renderAtStage(int stage)
     return energy;
 }
 
+static StereoEnergy renderAtPosition(orchestral::dsp::StagePosition position)
+{
+    using orchestral::dsp::FDNReverb;
+    FDNReverb reverb;
+    reverb.prepare(48000.0, 512);
+    FDNReverb::Parameters p;
+    p.decaySeconds = 2.0f;
+    p.dampingHz = 10000.0f;
+    p.inputGain = 0.25f;
+    p.wetGain = 1.0f;
+    p.useExplicitStagePosition = true;
+    p.stagePan = position.pan;
+    p.stageDepth = position.depth;
+    reverb.setParameters(p);
+
+    StereoEnergy energy;
+    for (int n = 0; n < 48000 * 3; ++n)
+    {
+        const float input = n == 0 ? 1.0f : 0.0f;
+        float left = 0.0f, right = 0.0f;
+        reverb.processSample(input, input, left, right);
+        energy.left += static_cast<double>(left) * left;
+        energy.right += static_cast<double>(right) * right;
+    }
+    return energy;
+}
+
 int main()
 {
     using orchestral::dsp::FDNReverb;
@@ -60,6 +87,12 @@ int main()
     const auto chamberTimpani = orchestral::dsp::getStagePosition(
         orchestral::dsp::StageLayout::chamberModern, 13);
     assert(chamberTimpani.depth > chamberModernViolinI.depth);
+    const auto modernRender = renderAtPosition(chamberModernViolinI);
+    const auto antiphonalRender = renderAtPosition(chamberClassicalViolinI);
+    const double spatialRenderDifference =
+        std::abs(modernRender.left - antiphonalRender.left)
+        + std::abs(modernRender.right - antiphonalRender.right);
+    assert(spatialRenderDifference > 1.0e-8);
     FDNReverb reverb;
     reverb.prepare(48000.0, 512);
 
