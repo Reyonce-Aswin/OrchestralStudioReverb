@@ -63,8 +63,8 @@ public:
   drawText(g,"REVERB TIME",29,291,200,18,10,ink);
   knob(g,145,360,"DECAY","2.80 s");
   drawText(g,layout==0?"STANDARD ORCHESTRA LAYOUT":"CLASSICAL / EUROPEAN (ANTIPHONAL) LAYOUT",302,69,450,18,10,ink);
-  drawText(g,String("SELECTED: ")+selectedName.toUpperCase(),770,69,200,18,10,blue,juce::Justification::centredRight);
-  drawStage(g,stage.reduced(14,39,14,12));
+  drawText(g,juce::String("SELECTED: ")+selectedName.toUpperCase(),770,69,200,18,10,blue,juce::Justification::centredRight);
+  drawStage(g,stage.withTrimmedLeft(14).withTrimmedRight(14).withTrimmedTop(39).withTrimmedBottom(12));
   auto bottom=juce::Rectangle<float>(14,468,972,218); rounded(g,bottom,line,panel);
   drawText(g,"DECAY",34,480,110,16,10,ink);
   knob(g,92,538,"LOW DECAY","2.80 s",0.78f); knob(g,195,538,"HIGH DECAY","4.20 s",0.87f);
@@ -123,7 +123,7 @@ private:
   drawText(g,value,x+w+9,y-8,55,18,9,ink);
  }
  static void meter(juce::Graphics&g,int x,int y,int w,int h,float value)
- {for(int i=0;i<48;++i){float xx=x+i*(w/48.0f);g.setColour(i<48*value?blue.withAlpha(0.9f):line.withAlpha(0.6f));g.fillRect(xx,float(y),w/48.0f-1,h);}}
+ {for(int i=0;i<48;++i){float xx=x+i*(w/48.0f);g.setColour(i<48*value?blue.withAlpha(0.9f):line.withAlpha(0.6f));g.fillRect(xx,float(y),w/48.0f-1.0f,float(h));}}
  static juce::Path sectorPath(const Sector&s,juce::Point<float>c,juce::Rectangle<float>r)
  {
   float scale=juce::jmin(r.getWidth()/1200.0f,r.getHeight()/519.75f);
