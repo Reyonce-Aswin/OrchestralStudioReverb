@@ -18,6 +18,12 @@ OrchestralStudioReverbAudioProcessor::createParameterLayout()
         NormalisableRange<float>(0.15f, 20.0f, 0.01f, 0.35f), 2.2f, "s"));
     layout.add(std::make_unique<AudioParameterFloat>(ParameterID { "damping", 1 }, "Damping",
         NormalisableRange<float>(500.0f, 18000.0f, 1.0f, 0.4f), 9000.0f, "Hz"));
+    layout.add(std::make_unique<AudioParameterFloat>(ParameterID { "roomSize", 1 }, "Room Size",
+        NormalisableRange<float>(0.5f, 2.0f, 0.001f, 0.6f), 1.0f, "x"));
+    layout.add(std::make_unique<AudioParameterFloat>(ParameterID { "preDelay", 1 }, "Pre-delay",
+        NormalisableRange<float>(0.0f, 100.0f, 0.1f), 12.0f, "ms"));
+    layout.add(std::make_unique<AudioParameterFloat>(ParameterID { "early", 1 }, "Early Level",
+        NormalisableRange<float>(0.0f, 1.0f, 0.001f), 0.45f));
     // Parallel return architecture: neither fader changes the other.
     layout.add(std::make_unique<AudioParameterFloat>(ParameterID { "dry", 1 }, "Dry",
         NormalisableRange<float>(0.0f, 1.0f, 0.001f), 1.0f));
@@ -29,15 +35,20 @@ OrchestralStudioReverbAudioProcessor::createParameterLayout()
 void OrchestralStudioReverbAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     reverb.prepare(sampleRate, static_cast<std::size_t>(samplesPerBlock));
+    earlyReflections.prepare(sampleRate);
+
     drySmoother.reset(sampleRate, 0.03);
     wetSmoother.reset(sampleRate, 0.03);
+    earlySmoother.reset(sampleRate, 0.03);
     drySmoother.setCurrentAndTargetValue(parameters.getRawParameterValue("dry")->load());
     wetSmoother.setCurrentAndTargetValue(parameters.getRawParameterValue("wet")->load());
+    earlySmoother.setCurrentAndTargetValue(parameters.getRawParameterValue("early")->load());
 }
 
 void OrchestralStudioReverbAudioProcessor::releaseResources()
 {
     reverb.reset();
+    earlyReflections.reset();
 }
 
 bool OrchestralStudioReverbAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
@@ -57,15 +68,21 @@ void OrchestralStudioReverbAudioProcessor::processBlock(juce::AudioBuffer<float>
     if (channels == 0)
         return;
 
-    orchestral::dsp::FDNReverb::Parameters p;
-    p.decaySeconds = parameters.getRawParameterValue("decay")->load();
-    p.dampingHz = parameters.getRawParameterValue("damping")->load();
-    p.inputGain = 0.45f; // Stronger excitation makes the late return easier to hear.
-    p.wetGain = 1.0f;
-    reverb.setParameters(p);
+    orchestral::dsp::FDNReverb::Parameters lateParameters;
+    lateParameters.decaySeconds = parameters.getRawParameterValue("decay")->load();
+    lateParameters.dampingHz = parameters.getRawParameterValue("damping")->load();
+    lateParameters.inputGain = 0.45f;
+    lateParameters.wetGain = 1.0f;
+    reverb.setParameters(lateParameters);
+
+    orchestral::dsp::EarlyReflections::Parameters earlyParameters;
+    earlyParameters.roomSize = parameters.getRawParameterValue("roomSize")->load();
+    earlyParameters.preDelayMs = parameters.getRawParameterValue("preDelay")->load();
+    earlyReflections.setParameters(earlyParameters);
 
     drySmoother.setTargetValue(parameters.getRawParameterValue("dry")->load());
     wetSmoother.setTargetValue(parameters.getRawParameterValue("wet")->load());
+    earlySmoother.setTargetValue(parameters.getRawParameterValue("early")->load());
 
     auto* left = buffer.getWritePointer(0);
     auto* right = channels > 1 ? buffer.getWritePointer(1) : nullptr;
@@ -74,14 +91,18 @@ void OrchestralStudioReverbAudioProcessor::processBlock(juce::AudioBuffer<float>
     {
         const float dryL = left[i];
         const float dryR = right != nullptr ? right[i] : dryL;
-        float wetL = 0.0f, wetR = 0.0f;
-        reverb.processSample(dryL, dryR, wetL, wetR);
+
+        float lateL = 0.0f, lateR = 0.0f;
+        float earlyL = 0.0f, earlyR = 0.0f;
+        reverb.processSample(dryL, dryR, lateL, lateR);
+        earlyReflections.processSample(dryL, dryR, earlyL, earlyR);
 
         const float dryGain = drySmoother.getNextValue();
         const float wetGain = wetSmoother.getNextValue();
-        left[i] = dryGain * dryL + wetGain * wetL;
+        const float earlyGain = earlySmoother.getNextValue();
+        left[i] = dryGain * dryL + wetGain * lateL + earlyGain * earlyL;
         if (right != nullptr)
-            right[i] = dryGain * dryR + wetGain * wetR;
+            right[i] = dryGain * dryR + wetGain * lateR + earlyGain * earlyR;
     }
 }
 
