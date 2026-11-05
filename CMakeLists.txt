@@ -11,6 +11,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(osr_dsp STATIC
     Source/DSP/FDNReverb.cpp
+    Source/DSP/EarlyReflections.cpp
 )
 target_include_directories(osr_dsp PUBLIC Source/DSP)
 target_compile_features(osr_dsp PUBLIC cxx_std_17)
@@ -23,9 +24,14 @@ endif()
 
 if(OSR_BUILD_TESTS)
     enable_testing()
+
     add_executable(osr_fdn_tests Tests/FDNTests.cpp)
     target_link_libraries(osr_fdn_tests PRIVATE osr_dsp)
     add_test(NAME osr_fdn_tests COMMAND osr_fdn_tests)
+
+    add_executable(osr_early_reflections_tests Tests/EarlyReflectionsTests.cpp)
+    target_link_libraries(osr_early_reflections_tests PRIVATE osr_dsp)
+    add_test(NAME osr_early_reflections_tests COMMAND osr_early_reflections_tests)
 endif()
 
 if(OSR_BUILD_VST3)
