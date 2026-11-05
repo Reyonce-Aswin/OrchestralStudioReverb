@@ -212,7 +212,12 @@ private:
         const float output = c.b0 * input + channel.z1;
         channel.z1 = c.b1 * input - c.a1 * output + channel.z2;
         channel.z2 = c.b2 * input - c.a2 * output;
-        return std::isfinite(output) ? output : 0.0f;
+        if (!std::isfinite(output))
+        {
+            channel.z1 = channel.z2 = 0.0f;
+            return 0.0f;
+        }
+        return output;
     }
 
     double sampleRate = 48000.0;
