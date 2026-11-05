@@ -12,8 +12,8 @@ namespace orchestral::dsp
     - Mutually-prime-ish delay lengths to reduce obvious periodicity.
     - Per-line one-pole damping in the feedback paths.
     - RT60-derived feedback gains, with a practical upper bound for safety.
+    - Stage-aware stereo injection and return perspective.
 
-    This is a first usable algorithmic core, not yet a complete room model.
     Call prepare() before processing and do not resize/reconfigure it on the audio thread.
 */
 class FDNReverb
@@ -23,10 +23,11 @@ public:
 
     struct Parameters
     {
-        float decaySeconds = 2.2f;       // Approximate mid/high-band decay.
-        float dampingHz = 9000.0f;       // One-pole low-pass cutoff in feedback paths.
-        float inputGain = 0.22f;         // Excitation amount.
-        float wetGain = 0.25f;           // Output level; dry/wet is handled by the plugin.
+        float decaySeconds = 2.2f;
+        float dampingHz = 9000.0f;
+        float inputGain = 0.22f;
+        float wetGain = 0.25f;
+        int stagePosition = 1;
     };
 
     void prepare(double sampleRate, std::size_t maximumBlockSize);
@@ -67,5 +68,7 @@ private:
     std::array<float, kLineCount> delayed{};
     std::array<float, kLineCount> feedback{};
     Parameters parameters{};
+    float stagePan = -0.48f;
+    float stageDepth = 0.66f;
 };
 } // namespace orchestral::dsp

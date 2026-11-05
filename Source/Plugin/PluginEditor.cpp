@@ -7,46 +7,43 @@ namespace
 {
 const juce::Colour background { 25, 27, 34 };
 const juce::Colour panel { 34, 37, 47 };
-const juce::Colour border { 78, 82, 96 };
+const juce::Colour border { 126, 131, 148 };
 const juce::Colour text { 226, 228, 237 };
 const juce::Colour muted { 157, 162, 179 };
-const juce::Colour accent { 184, 184, 218 };
-
-juce::Colour familyColour(int family)
-{
-    switch (family)
-    {
-        case 1: return juce::Colour(66, 91, 112);
-        case 2: return juce::Colour(67, 91, 82);
-        case 3: return juce::Colour(91, 75, 91);
-        case 4: return juce::Colour(102, 91, 68);
-        default: return juce::Colour(75, 72, 91);
-    }
-}
+const juce::Colour accent { 210, 212, 226 };
 }
 
 OrchestraStageMap::OrchestraStageMap()
 {
+    // Main orchestra: strings in the inner ring, woodwinds in the middle,
+    // percussion in the outer ring. Brass sits on its own outer-right arc.
+    // Angles are measured from the right-hand baseline towards the left.
     sectors = {
-        { "Piano", 0.0f, 180.0f, 0.0f, 0.0f, 0 },
-        { "Violin I", 145.0f, 180.0f, 0.0f, 0.0f, 2 },
-        { "Violin II", 112.0f, 145.0f, 0.0f, 0.0f, 2 },
-        { "Violas", 78.0f, 112.0f, 0.0f, 0.0f, 2 },
-        { "Celli", 43.0f, 78.0f, 0.0f, 0.0f, 2 },
-        { "Basses", 0.0f, 43.0f, 0.0f, 0.0f, 2 },
-        { "Piccolos", 145.0f, 180.0f, 0.0f, 0.0f, 1 },
-        { "Flutes", 116.0f, 145.0f, 0.0f, 0.0f, 1 },
-        { "Oboes", 87.0f, 116.0f, 0.0f, 0.0f, 1 },
-        { "Clarinets", 58.0f, 87.0f, 0.0f, 0.0f, 1 },
-        { "Bassoons", 29.0f, 58.0f, 0.0f, 0.0f, 1 },
-        { "Harp & Celeste", 120.0f, 155.0f, 0.0f, 0.0f, 4 },
-        { "Timpani & Untuned Percussion", 65.0f, 115.0f, 0.0f, 0.0f, 4 },
-        { "Tuned Percussion", 25.0f, 60.0f, 0.0f, 0.0f, 4 },
-        { "Horns", 155.0f, 180.0f, 0.0f, 0.0f, 3 },
-        { "Trumpets", 0.0f, 22.5f, 0.0f, 0.0f, 3 },
-        { "Tenor Trombones", 22.5f, 45.0f, 0.0f, 0.0f, 3 },
-        { "Bass Trombones", 45.0f, 67.5f, 0.0f, 0.0f, 3 },
-        { "Tuba", 67.5f, 90.0f, 0.0f, 0.0f, 3 }
+        { "Piano", 0.0f, 180.0f, 0.0f, 70.0f, 0 },
+
+        { "Violin I", 145.0f, 180.0f, 78.0f, 133.0f, 2 },
+        { "Violin II", 105.0f, 145.0f, 78.0f, 133.0f, 2 },
+        { "Violas", 65.0f, 105.0f, 78.0f, 133.0f, 2 },
+        { "Celli", 0.0f, 65.0f, 78.0f, 139.0f, 2 },
+        { "Basses", 0.0f, 43.0f, 139.0f, 192.0f, 2 },
+
+        { "Piccolos", 165.0f, 180.0f, 139.0f, 192.0f, 1 },
+        { "Flutes", 145.0f, 165.0f, 139.0f, 192.0f, 1 },
+        { "Oboes", 105.0f, 145.0f, 139.0f, 192.0f, 1 },
+        { "Clarinets", 65.0f, 105.0f, 139.0f, 192.0f, 1 },
+        { "Bassoons", 43.0f, 65.0f, 139.0f, 192.0f, 1 },
+
+        { "Harp & Celeste", 145.0f, 165.0f, 198.0f, 247.0f, 4 },
+        { "Timpani & Untuned Percussion", 65.0f, 145.0f, 198.0f, 247.0f, 4 },
+        { "Tuned Percussion", 43.0f, 65.0f, 198.0f, 247.0f, 4 },
+        { "Horns", 165.0f, 180.0f, 198.0f, 247.0f, 3 },
+
+        // Reverse the previous brass order: trumpets at the top, tuba at
+        // the bottom, with all four sections outside the percussion ring.
+        { "Trumpets", 67.5f, 90.0f, 265.0f, 325.0f, 3 },
+        { "Tenor Trombones", 45.0f, 67.5f, 265.0f, 325.0f, 3 },
+        { "Bass Trombones", 22.5f, 45.0f, 265.0f, 325.0f, 3 },
+        { "Tuba", 0.0f, 22.5f, 265.0f, 325.0f, 3 }
     };
 }
 
@@ -55,20 +52,12 @@ juce::Path OrchestraStageMap::makeSector(const Sector& sector,
                                           float baseline) const
 {
     const float scale = juce::jmin(getWidth() / 900.0f, getHeight() / 360.0f);
-    float inner = 0.0f;
-    float outer = 70.0f * scale;
-
-    if (sector.family == 2) { inner = 78.0f * scale; outer = 133.0f * scale; }
-    if (sector.family == 1) { inner = 139.0f * scale; outer = 192.0f * scale; }
-    if (sector.family == 4) { inner = 198.0f * scale; outer = 247.0f * scale; }
-    if (sector.family == 3) { inner = 139.0f * scale; outer = 247.0f * scale; }
-
-    if (sector.family == 3 && sector.name == "Horns")
-        inner = 198.0f * scale;
+    const float inner = sector.innerRadius * scale;
+    const float outer = sector.outerRadius * scale;
 
     juce::Path path;
-    const float step = (sector.endDegrees - sector.startDegrees) / 32.0f;
-    for (int i = 0; i <= 32; ++i)
+    const float step = (sector.endDegrees - sector.startDegrees) / 40.0f;
+    for (int i = 0; i <= 40; ++i)
     {
         const float a = juce::degreesToRadians(
             sector.startDegrees + step * static_cast<float>(i));
@@ -80,7 +69,7 @@ juce::Path OrchestraStageMap::makeSector(const Sector& sector,
 
     if (inner > 0.0f)
     {
-        for (int i = 32; i >= 0; --i)
+        for (int i = 40; i >= 0; --i)
         {
             const float a = juce::degreesToRadians(
                 sector.startDegrees + step * static_cast<float>(i));
@@ -101,36 +90,43 @@ void OrchestraStageMap::paint(juce::Graphics& g)
     g.fillAll(panel);
     const auto centre = juce::Point<float>(getWidth() * 0.5f, getHeight() - 12.0f);
     const float baseline = getHeight() - 12.0f;
-    const float scale = juce::jmin(getWidth() / 900.0f, getHeight() / 360.0f);
 
+    // Draw from the innermost sections outwards so every boundary remains crisp.
     for (int i = 0; i < static_cast<int>(sectors.size()); ++i)
     {
         const auto& sector = sectors[static_cast<size_t>(i)];
         const auto path = makeSector(sector, centre, baseline);
-        g.setColour(i == selectedSection ? accent.withAlpha(0.82f)
-                                          : familyColour(sector.family).withAlpha(0.42f));
-        g.fillPath(path);
         g.setColour(i == selectedSection ? accent : border);
-        g.strokePath(path, juce::PathStrokeType(i == selectedSection ? 2.0f : 1.0f));
+        g.strokePath(path, juce::PathStrokeType(i == selectedSection ? 2.0f : 1.15f));
 
         if (sector.name != "Piano")
         {
             const float mid = (sector.startDegrees + sector.endDegrees) * 0.5f;
-            float radius = sector.family == 2 ? 105.0f : sector.family == 1 ? 165.0f
-                         : sector.family == 4 ? 222.0f : 222.0f;
+            const float radius = (sector.innerRadius + sector.outerRadius) * 0.5f;
+            const float scale = juce::jmin(getWidth() / 900.0f, getHeight() / 360.0f);
             const float a = juce::degreesToRadians(mid);
             const float x = centre.x + std::cos(a) * radius * scale;
             const float y = baseline - std::sin(a) * radius * scale;
-            auto label = sector.name;
-            if (label == "Timpani & Untuned Percussion") label = "TIMPANI / PERC.";
+
+            juce::String label = sector.name;
+            if (label == "Timpani & Untuned Percussion") label = "TIMPANI / PERC";
             if (label == "Harp & Celeste") label = "HARP / CELESTE";
             if (label == "Tuned Percussion") label = "TUBULAR BELLS / MALLETS";
+            if (label == "Tenor Trombones") label = "TENOR TROMBONES";
+            if (label == "Bass Trombones") label = "BASS TROMBONES";
+
+            const bool brass = sector.family == 3 && sector.name != "Horns";
+            const float labelWidth = brass ? 112.0f : 132.0f;
+            const float labelScale = brass ? 0.78f : 0.86f;
             g.setColour(text);
-            const float labelScale = sector.family == 3 ? 0.82f : 1.0f;
-            g.setFont(juce::Font(juce::FontOptions(juce::jmax(9.0f, 11.0f * scale * labelScale))));
-            g.drawFittedText(label, juce::Rectangle<int>(static_cast<int>(x - 62.0f * scale),
-                static_cast<int>(y - 14.0f * scale), static_cast<int>(124.0f * scale),
-                static_cast<int>(28.0f * scale)), juce::Justification::centred, 1);
+            g.setFont(juce::Font(juce::FontOptions(
+                juce::jmax(8.5f, 11.0f * scale * labelScale))));
+            g.drawFittedText(label,
+                juce::Rectangle<int>(static_cast<int>(x - labelWidth * scale * 0.5f),
+                    static_cast<int>(y - 18.0f * scale),
+                    static_cast<int>(labelWidth * scale),
+                    static_cast<int>(36.0f * scale)),
+                juce::Justification::centred, 2);
         }
     }
 
