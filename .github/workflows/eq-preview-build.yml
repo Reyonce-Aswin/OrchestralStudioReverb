@@ -1,3 +1,4 @@
+# Preview-only gate: the VST3 build is deliberately deferred until the preview is approved.
 name: EQ preview build and DSP tests
 
 on:
