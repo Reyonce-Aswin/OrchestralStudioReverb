@@ -90,6 +90,6 @@ int main()
     std::cout << "FDN impulse/tail and stage-position tests passed. Peak=" << peak
               << ", total energy=" << totalEnergy
               << ", late-tail energy=" << lateTailEnergy
-              << ", stage difference=" << stageDifference << '\\n';
+              << ", stage difference=" << stageDifference << '\n';
     return 0;
 }
