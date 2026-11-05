@@ -247,7 +247,10 @@ void OSREQGraph::paint(juce::Graphics& g)
         for (int band = 0; band < 8; ++band)
         {
             const auto prefix = "eqBand" + juce::String(band + 1);
-            if (eqBypassed || value(prefix + "Enabled") < 0.5f)
+            // Keep the selected band visible in the response preview even while
+            // bypassed individually. This lets users shape a band before enabling it.
+            // EQ global bypass still correctly displays a flat response.
+            if (eqBypassed || (value(prefix + "Enabled") < 0.5f && band != selectedBand))
                 continue;
             const float centre = value(prefix + "Freq");
             const float gain = value(prefix + "Gain");
@@ -282,7 +285,14 @@ void OSREQGraph::paint(juce::Graphics& g)
         else response.lineTo(x, y);
     }
     g.setColour(juce::Colour(0xD5, 0xD8, 0xE2));
-    g.strokePath(response, juce::PathStrokeType(2.0f));
+    g.strokePath(response, juce::PathStrokeType(2.2f));
+
+    // Explain why an inactive band can still shape the preview curve.
+    g.setColour(muted);
+    g.setFont(uiFont(9.0f));
+    g.drawText(eqBypassed ? "EQ BYPASSED" : "RESPONSE PREVIEW",
+               plot.getX() + 8.0f, plot.getY() + 6.0f, 140.0f, 14.0f,
+               juce::Justification::left);
 
     for (int band = 0; band < 8; ++band)
     {
