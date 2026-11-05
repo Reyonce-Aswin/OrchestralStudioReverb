@@ -82,9 +82,18 @@ void EarlyReflections::setParameters(const Parameters& newParameters) noexcept
     targetPreDelayMs = std::clamp(newParameters.preDelayMs, 0.0f, 100.0f);
     const auto index = static_cast<std::size_t>(
         std::clamp(newParameters.stagePosition, 0, static_cast<int>(kStageProfiles.size()) - 1));
-    targetStagePan = kStageProfiles[index].pan;
-    targetStageDepth = kStageProfiles[index].depth;
-    targetStageLevel = kStageProfiles[index].level;
+    if (newParameters.useExplicitStagePosition)
+    {
+        targetStagePan = std::clamp(newParameters.stagePan, -1.0f, 1.0f);
+        targetStageDepth = std::clamp(newParameters.stageDepth, 0.0f, 1.0f);
+        targetStageLevel = std::clamp(newParameters.stageLevel, 0.5f, 1.2f);
+    }
+    else
+    {
+        targetStagePan = kStageProfiles[index].pan;
+        targetStageDepth = kStageProfiles[index].depth;
+        targetStageLevel = kStageProfiles[index].level;
+    }
 }
 
 float EarlyReflections::readDelayed(const std::vector<float>& buffer,
