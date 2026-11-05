@@ -28,6 +28,9 @@ public:
         float inputGain = 0.22f;
         float wetGain = 0.25f;
         int stagePosition = 1;
+        float stagePan = 0.0f;
+        float stageDepth = 0.5f;
+        bool useExplicitStagePosition = false;
     };
 
     void prepare(double sampleRate, std::size_t maximumBlockSize);
