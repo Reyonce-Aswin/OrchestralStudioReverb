@@ -1,0 +1,45 @@
+# Preview-only gate: the VST3 build is deliberately deferred until the preview is approved.
+name: EQ preview build and DSP tests
+
+on:
+  push:
+    branches: ['feature/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-preview:
+    name: Windows / MSVC / EQ preview
+    runs-on: windows-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure CMake with JUCE
+        run: >
+          cmake -S . -B build -A x64
+          -DOSR_FETCH_JUCE=ON
+          -DOSR_BUILD_VST3=ON
+          -DOSR_BUILD_TESTS=ON
+
+      - name: Build standalone full-plugin preview and DSP tests
+        run: >
+          cmake --build build --config Release --parallel
+          --target OrchestralStudioReverbFullPreview
+          osr_fdn_tests osr_early_reflections_tests osr_parametric_eq_tests
+
+      - name: Run DSP tests
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Upload full plugin UI preview
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: OrchestralStudioReverb-EQ-Preview-Windows
+          path: build/OrchestralStudioReverbFullPreview_artefacts/Release/*.exe
+          if-no-files-found: error
+          retention-days: 14

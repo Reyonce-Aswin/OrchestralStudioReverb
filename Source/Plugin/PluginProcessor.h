@@ -2,6 +2,7 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include "FDNReverb.h"
 #include "EarlyReflections.h"
+#include "ParametricEQ.h"
 
 class OrchestralStudioReverbAudioProcessor final : public juce::AudioProcessor
 {
@@ -35,9 +36,11 @@ public:
 private:
     orchestral::dsp::FDNReverb reverb;
     orchestral::dsp::EarlyReflections earlyReflections;
+    orchestral::dsp::ParametricEQ parametricEQ;
     juce::AudioProcessorValueTreeState parameters;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> drySmoother;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> wetSmoother;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> earlySmoother;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> eqMixSmoother;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OrchestralStudioReverbAudioProcessor)
 };
