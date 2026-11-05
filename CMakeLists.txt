@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
 project(OrchestralStudioReverb VERSION 0.1.0 LANGUAGES C CXX)
 
+# The EQ processor is header-only and is covered by its dedicated standalone test target.
 option(OSR_BUILD_TESTS "Build standalone DSP tests" ON)
 option(OSR_BUILD_VST3 "Build the JUCE VST3 plugin when JUCE is available" ON)
 option(OSR_FETCH_JUCE "Fetch JUCE from GitHub if it is not already available" OFF)
