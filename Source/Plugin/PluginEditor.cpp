@@ -236,6 +236,7 @@ void OSREQGraph::paint(juce::Graphics& g)
     {
         return parameters.getRawParameterValue(id)->load();
     };
+    const bool eqBypassed = value("eqBypass") > 0.5f;
     juce::Path response;
     for (int sample = 0; sample <= 240; ++sample)
     {
@@ -245,7 +246,7 @@ void OSREQGraph::paint(juce::Graphics& g)
         for (int band = 0; band < 8; ++band)
         {
             const auto prefix = "eqBand" + juce::String(band + 1);
-            if (value(prefix + "Enabled") < 0.5f)
+            if (eqBypassed || value(prefix + "Enabled") < 0.5f)
                 continue;
             const float centre = value(prefix + "Freq");
             const float gain = value(prefix + "Gain");
@@ -477,6 +478,7 @@ OrchestralStudioReverbAudioProcessorEditor::OrchestralStudioReverbAudioProcessor
     setupTabButton(eqBypassButton);
     stageViewButton.onClick = [this] { setActiveView(false); };
     eqViewButton.onClick = [this] { setActiveView(true); };
+    eqTypeBox.onChange = [this] { updateEQBandTypeControls(); eqGraph.repaint(); };
     eqBypassButton.setClickingTogglesState(true);
     eqBypassAttachment = std::make_unique<ButtonAttachment>(state, "eqBypass", eqBypassButton);
 
@@ -639,17 +641,23 @@ void OrchestralStudioReverbAudioProcessorEditor::rebuildEQAttachments()
     eqSlopeBox.addItem("48 dB / OCT", 4);
     eqTypeAttachment = std::make_unique<ComboAttachment>(state, prefix + "Type", eqTypeBox);
     eqSlopeAttachment = std::make_unique<ComboAttachment>(state, prefix + "Slope", eqSlopeBox);
+    updateEQBandTypeControls();
+    eqGraph.repaint();
+}
 
+void OrchestralStudioReverbAudioProcessorEditor::updateEQBandTypeControls()
+{
+    auto& state = processor.getParameters();
+    const auto prefix = "eqBand" + juce::String(selectedEQBand + 1);
     const int type = juce::roundToInt(state.getRawParameterValue(prefix + "Type")->load());
     const bool cut = (selectedEQBand == 0 && type == 0) || (selectedEQBand == 7 && type == 1);
     eqGain.setEnabled(!cut);
     eqGainLabel.setText(cut ? "GAIN (N/A FOR CUT)" : "GAIN", juce::dontSendNotification);
     eqQLabel.setText(cut ? "RESONANCE" : "Q", juce::dontSendNotification);
-    eqTypeBox.setVisible(selectedEQBand == 0 || selectedEQBand == 7);
-    eqTypeLabel.setVisible(selectedEQBand == 0 || selectedEQBand == 7);
-    eqSlopeBox.setVisible(cut);
-    eqSlopeLabel.setVisible(cut);
-    eqGraph.repaint();
+    eqTypeBox.setVisible(showingEQ && (selectedEQBand == 0 || selectedEQBand == 7));
+    eqTypeLabel.setVisible(showingEQ && (selectedEQBand == 0 || selectedEQBand == 7));
+    eqSlopeBox.setVisible(showingEQ && cut);
+    eqSlopeLabel.setVisible(showingEQ && cut);
 }
 
 void OrchestralStudioReverbAudioProcessorEditor::setActiveView(bool showEQ)
@@ -841,4 +849,6 @@ void OrchestralStudioReverbAudioProcessorEditor::syncStageSelectionFromHost()
 void OrchestralStudioReverbAudioProcessorEditor::timerCallback()
 {
     syncStageSelectionFromHost();
+    updateEQBandTypeControls();
+    eqGraph.repaint();
 }
