@@ -85,6 +85,65 @@ void OrchestraLayoutComponent::rebuildSectors()
             { "Tuned Percussion", "Tuned Percussion", 333, 385, 68, 38, false, false, "TUNED PERCUSSION" }
         };
     }
+    else if (currentLayout == Layout::Classical)
+    {
+        sectors = {
+            { "PIANO", "PIANO", 62, 100, 180, 0, false, false, "PIANO" },
+            { "VIOLIN I", "VIOLIN I", 108, 205, 180, 140, false, false, "VIOLIN I" },
+            { "CELLI", "CELLI", 108, 205, 140, 90, false, false, "CELLI" },
+            { "VIOLAS", "VIOLAS", 108, 205, 90, 40, false, false, "VIOLAS" },
+            { "VIOLIN II", "VIOLIN II", 108, 205, 40, 0, false, false, "VIOLIN II" },
+            { "BASSES", "BASSES", 213, 265, 150, 118, false, false, "BASSES" },
+            { "PICCOLOS / FLUTES", "PICCOLOS", 213, 265, 118, 94, false, false, "PICCOLOS /\nFLUTES" },
+            { "OBOES", "OBOES", 213, 265, 94, 70, false, false, "OBOES" },
+            { "CLARINETS", "CLARINETS", 213, 265, 70, 46, false, false, "CLARINETS" },
+            { "BASSOONS", "BASSOONS", 213, 265, 46, 22, false, false, "BASSOONS" },
+            { "HARP / CELESTE", "HARP / CELESTE", 273, 325, 180, 152, false, false, "HARP /\nCELESTE" },
+            { "HORNS", "HORNS", 273, 325, 148, 120, false, false, "HORNS" },
+            { "TRUMPETS", "TRUMPETS", 273, 325, 120, 98, false, false, "TRUMPETS" },
+            { "TENOR TROMBONES", "TENOR TROMBONES", 273, 325, 98, 78, false, false, "TENOR\nTROMBONES" },
+            { "BASS TROMBONES", "BASS TROMBONES", 273, 325, 78, 60, false, false, "BASS\nTROMBONES" },
+            { "TUBA", "TUBA", 273, 325, 60, 44, false, false, "TUBA" },
+            { "PERCUSSION", "PERCUSSION", 333, 385, 125, 68, false, false, "PERCUSSION" },
+            { "TUNED PERCUSSION", "TUNED PERCUSSION", 333, 385, 68, 38, false, false, "TUNED PERCUSSION" }
+        };
+    }
+    else if (currentLayout == Layout::ChamberModern)
+    {
+        sectors = {
+            { "PIANO", "PIANO", 62, 100, 180, 0, false, false, "PIANO" },
+            { "VIOLIN I", "VIOLIN I", 108, 165, 180, 135, false, false, "VIOLIN I" },
+            { "VIOLIN II", "VIOLIN II", 108, 165, 135, 90, false, false, "VIOLIN II" },
+            { "VIOLAS", "VIOLAS", 108, 165, 90, 45, false, false, "VIOLAS" },
+            { "CELLI", "CELLI", 108, 165, 45, 0, false, false, "CELLI" },
+            { "FLUTES", "FLUTES", 173, 225, 180, 146, false, false, "FLUTES" },
+            { "OBOES", "OBOES", 173, 225, 146, 112, false, false, "OBOES" },
+            { "CLARINETS", "CLARINETS", 173, 225, 112, 78, false, false, "CLARINETS" },
+            { "BASSOONS", "BASSOONS", 173, 225, 78, 45, false, false, "BASSOONS" },
+            { "BASSES", "BASSES", 173, 225, 45, 0, false, false, "BASSES" },
+            { "HORNS", "HORNS", 233, 285, 150, 108, false, false, "HORNS" },
+            { "TRUMPETS", "TRUMPETS", 233, 285, 108, 66, false, false, "TRUMPETS" },
+            { "TIMPANI", "TIMPANI", 293, 345, 120, 60, false, false, "TIMPANI" }
+        };
+    }
+    else
+    {
+        sectors = {
+            { "HARPSICHORD / FORTEPIANO", "HARPSICHORD / FORTEPIANO", 62, 100, 180, 0, false, false, "HARPSICHORD /\nFORTEPIANO" },
+            { "VIOLIN I", "VIOLIN I", 108, 165, 180, 140, false, false, "VIOLIN I" },
+            { "CELLI", "CELLI", 108, 165, 140, 90, false, false, "CELLI" },
+            { "VIOLAS", "VIOLAS", 108, 165, 90, 40, false, false, "VIOLAS" },
+            { "VIOLIN II", "VIOLIN II", 108, 165, 40, 0, false, false, "VIOLIN II" },
+            { "BASSES", "BASSES", 173, 225, 150, 122, false, false, "BASSES" },
+            { "FLUTES", "FLUTES", 173, 225, 122, 98, false, false, "FLUTES" },
+            { "OBOES", "OBOES", 173, 225, 98, 74, false, false, "OBOES" },
+            { "CLARINETS", "CLARINETS", 173, 225, 74, 50, false, false, "CLARINETS" },
+            { "BASSOONS", "BASSOONS", 173, 225, 50, 26, false, false, "BASSOONS" },
+            { "HORNS", "HORNS", 233, 285, 126, 96, false, false, "HORNS" },
+            { "TRUMPETS", "TRUMPETS", 233, 285, 96, 66, false, false, "TRUMPETS" },
+            { "TIMPANI", "TIMPANI", 293, 345, 110, 70, false, false, "TIMPANI" }
+        };
+    }
 
     selectedIndex = juce::jlimit(0, static_cast<int>(sectors.size()) - 1, selectedIndex);
     sectorPaths.resize(sectors.size());
@@ -96,8 +155,11 @@ float OrchestraLayoutComponent::getLayoutScale() const noexcept
     if (currentLayout == Layout::Standard)
         return juce::jmin(static_cast<float>(getWidth()) / 750.0f,
                           static_cast<float>(getHeight()) / 388.0f);
-    return 1.35f * juce::jmin(static_cast<float>(getWidth()) / 1200.0f,
-                              static_cast<float>(getHeight()) / 519.75f);
+    if (currentLayout == Layout::Classical)
+        return 1.35f * juce::jmin(static_cast<float>(getWidth()) / 1200.0f,
+                                  static_cast<float>(getHeight()) / 519.75f);
+    return 1.5f * juce::jmin(static_cast<float>(getWidth()) / 1200.0f,
+                             static_cast<float>(getHeight()) / 660.0f);
 }
 
 void OrchestraLayoutComponent::resized()
@@ -290,9 +352,12 @@ void OrchestraLayoutComponent::setLayout(Layout layout, bool notify)
     for (std::size_t i = 0; i < sectors.size(); ++i)
         if (sectors[i].parameterName == previousSelection
             || (currentLayout == Layout::Classical && previousSelection == "Flutes"
-                && sectors[i].name == "Piccolos / Flutes"))
+                && sectors[i].name == "PICCOLOS / FLUTES"))
         { match = static_cast<int>(i); break; }
-    if (match >= 0) selectedIndex = match;
+    selectedIndex = match >= 0 ? match : juce::jmin(1, static_cast<int>(sectors.size()) - 1);
+    juce::Logger::writeToLog("Orchestra layout sector count: " + juce::String(sectors.size()));
+    jassert((currentLayout == Layout::ChamberModern || currentLayout == Layout::ChamberClassical)
+                ? sectors.size() == 13 : true);
     resized();
     repaint();
     if (notify && onLayoutChanged) onLayoutChanged(currentLayout);
@@ -305,7 +370,7 @@ void OrchestraLayoutComponent::setSelectedSection(const juce::String& name, bool
     {
         if (sectors[i].parameterName == name || sectors[i].name == name
             || (currentLayout == Layout::Classical && name == "Flutes"
-                && sectors[i].name == "Piccolos / Flutes"))
+                && sectors[i].name == "PICCOLOS / FLUTES"))
         {
             selectedIndex = static_cast<int>(i);
             repaint();
@@ -325,4 +390,16 @@ juce::String OrchestraLayoutComponent::getSelectedParameterName() const
 {
     return selectedIndex >= 0 && selectedIndex < static_cast<int>(sectors.size())
         ? sectors[static_cast<std::size_t>(selectedIndex)].parameterName : juce::String{};
+}
+
+juce::String OrchestraLayoutComponent::getTitle() const
+{
+    switch (currentLayout)
+    {
+        case Layout::Standard: return "CHAMBER ORCHESTRA - MODERN";
+        case Layout::Classical: return "FULL ORCHESTRA - CLASSICAL (ANTIPHONAL)";
+        case Layout::ChamberModern: return "CHAMBER ORCHESTRA - MODERN";
+        case Layout::ChamberClassical: return "CHAMBER ORCHESTRA - CLASSICAL (ANTIPHONAL)";
+    }
+    return {};
 }
