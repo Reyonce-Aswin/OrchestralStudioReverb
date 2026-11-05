@@ -102,6 +102,7 @@ if(OSR_BUILD_VST3)
     target_link_libraries(OrchestralStudioReverbFullPreview PRIVATE
         osr_dsp
         juce::juce_audio_utils
+        juce::juce_gui_extra
         juce::juce_dsp
         juce::juce_recommended_config_flags
         juce::juce_recommended_warning_flags
