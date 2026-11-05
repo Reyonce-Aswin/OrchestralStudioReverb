@@ -845,6 +845,17 @@ void OrchestralStudioReverbAudioProcessorEditor::updateEQBandTypeControls()
     eqSlopeLabel.setVisible(showingEQ && cut);
 }
 
+void OrchestralStudioReverbAudioProcessorEditor::updateEQValueLabels()
+{
+    const double frequency = eqFrequency.getValue();
+    eqFrequencyValue.setText(frequency >= 1000.0
+        ? juce::String(frequency / 1000.0, 2) + " kHz"
+        : juce::String(frequency, 1) + " Hz", juce::dontSendNotification);
+    eqGainValue.setText(juce::String(eqGain.getValue(), 1) + " dB", juce::dontSendNotification);
+    eqQValue.setText(juce::String(eqQ.getValue(), 2), juce::dontSendNotification);
+    eqMixValue.setText(juce::String(eqMix.getValue() * 100.0, 1) + "%", juce::dontSendNotification);
+}
+
 void OrchestralStudioReverbAudioProcessorEditor::setActiveView(bool showEQ)
 {
     showingEQ = showEQ;
@@ -871,6 +882,10 @@ void OrchestralStudioReverbAudioProcessorEditor::setActiveView(bool showEQ)
     eqGain.setVisible(showEQ);
     eqQ.setVisible(showEQ);
     eqMix.setVisible(showEQ);
+    eqFrequencyLabel.setVisible(showEQ);
+    eqGainLabel.setVisible(showEQ);
+    eqQLabel.setVisible(showEQ);
+    eqMixLabel.setVisible(showEQ);
     eqFrequencyValue.setVisible(showEQ);
     eqGainValue.setVisible(showEQ);
     eqQValue.setVisible(showEQ);
@@ -1049,5 +1064,6 @@ void OrchestralStudioReverbAudioProcessorEditor::timerCallback()
     const auto prefix = "eqBand" + juce::String(selectedEQBand + 1);
     const bool bandEnabled = processor.getParameters().getRawParameterValue(prefix + "Enabled")->load() > 0.5f;
     eqEnableButton.setButtonText(bandEnabled ? "BAND ON" : "BAND OFF");
+    updateEQValueLabels();
     eqGraph.repaint();
 }
