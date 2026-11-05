@@ -1,0 +1,42 @@
+name: Standalone Interface Preview
+
+on:
+  push:
+    branches:
+      - design/full-interface-preview
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-preview:
+    runs-on: windows-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Configure JUCE preview
+        run: cmake -S . -B build -A x64 -DOSR_FETCH_JUCE=ON -DOSR_BUILD_VST3=ON -DOSR_BUILD_TESTS=OFF
+
+      - name: Build standalone visual preview
+        run: cmake --build build --config Release --target OrchestralStudioReverbInterfacePreview --parallel 2
+
+      - name: Package preview application
+        shell: pwsh
+        run: |
+          $app = Get-ChildItem -Path build -Filter "Orchestral Studio Reverb Interface Preview.exe" -Recurse | Select-Object -First 1
+          if (-not $app) { throw "Preview executable was not produced." }
+          $package = "preview-package"
+          New-Item -ItemType Directory -Force -Path $package | Out-Null
+          Copy-Item $app.FullName $package
+          $dataDir = Join-Path $app.Directory.FullName "Orchestral Studio Reverb Interface Preview_Data"
+          if (Test-Path $dataDir) { Copy-Item $dataDir $package -Recurse }
+          Compress-Archive -Path "$package/*" -DestinationPath "OrchestralStudioReverb-Interface-Preview.zip" -Force
+
+      - name: Upload standalone preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: OrchestralStudioReverb-Interface-Preview
+          path: OrchestralStudioReverb-Interface-Preview.zip
+          if-no-files-found: error
