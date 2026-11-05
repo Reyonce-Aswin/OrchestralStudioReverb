@@ -60,7 +60,7 @@ void OrchestralStudioReverbAudioProcessor::processBlock(juce::AudioBuffer<float>
     orchestral::dsp::FDNReverb::Parameters p;
     p.decaySeconds = parameters.getRawParameterValue("decay")->load();
     p.dampingHz = parameters.getRawParameterValue("damping")->load();
-    p.inputGain = 0.22f;
+    p.inputGain = 0.45f; // Stronger excitation makes the late return easier to hear.
     p.wetGain = 1.0f;
     reverb.setParameters(p);
 
