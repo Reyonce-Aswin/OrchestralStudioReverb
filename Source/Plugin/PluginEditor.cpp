@@ -43,10 +43,10 @@ OrchestraStageMap::OrchestraStageMap()
         { "Timpani & Untuned Percussion", 65.0f, 115.0f, 0.0f, 0.0f, 4 },
         { "Tuned Percussion", 25.0f, 60.0f, 0.0f, 0.0f, 4 },
         { "Horns", 155.0f, 180.0f, 0.0f, 0.0f, 3 },
-        { "Trumpets", 0.0f, 25.0f, 0.0f, 0.0f, 3 },
-        { "Tenor Trombones", 0.0f, 25.0f, 0.0f, 0.0f, 3 },
-        { "Bass Trombones", 0.0f, 25.0f, 0.0f, 0.0f, 3 },
-        { "Tuba", 0.0f, 25.0f, 0.0f, 0.0f, 3 }
+        { "Trumpets", 0.0f, 22.5f, 0.0f, 0.0f, 3 },
+        { "Tenor Trombones", 22.5f, 45.0f, 0.0f, 0.0f, 3 },
+        { "Bass Trombones", 45.0f, 67.5f, 0.0f, 0.0f, 3 },
+        { "Tuba", 67.5f, 90.0f, 0.0f, 0.0f, 3 }
     };
 }
 
@@ -63,14 +63,6 @@ juce::Path OrchestraStageMap::makeSector(const Sector& sector,
     if (sector.family == 4) { inner = 198.0f * scale; outer = 247.0f * scale; }
     if (sector.family == 3) { inner = 139.0f * scale; outer = 247.0f * scale; }
 
-    if (sector.family == 3 && sector.name != "Horns")
-    {
-        const int idx = sector.name == "Trumpets" ? 0 : sector.name == "Tenor Trombones" ? 1
-                      : sector.name == "Bass Trombones" ? 2 : 3;
-        const float band = (outer - inner) / 4.0f;
-        inner += band * static_cast<float>(idx);
-        outer = inner + band;
-    }
     if (sector.family == 3 && sector.name == "Horns")
         inner = 198.0f * scale;
 
@@ -126,10 +118,6 @@ void OrchestraStageMap::paint(juce::Graphics& g)
             const float mid = (sector.startDegrees + sector.endDegrees) * 0.5f;
             float radius = sector.family == 2 ? 105.0f : sector.family == 1 ? 165.0f
                          : sector.family == 4 ? 222.0f : 222.0f;
-            if (sector.family == 3 && sector.name != "Horns")
-                radius = 204.0f + (sector.name == "Trumpets" ? 0.0f :
-                         sector.name == "Tenor Trombones" ? 13.0f :
-                         sector.name == "Bass Trombones" ? 26.0f : 39.0f);
             const float a = juce::degreesToRadians(mid);
             const float x = centre.x + std::cos(a) * radius * scale;
             const float y = baseline - std::sin(a) * radius * scale;
@@ -138,10 +126,11 @@ void OrchestraStageMap::paint(juce::Graphics& g)
             if (label == "Harp & Celeste") label = "HARP / CELESTE";
             if (label == "Tuned Percussion") label = "TUBULAR BELLS / MALLETS";
             g.setColour(text);
-            g.setFont(juce::Font(juce::FontOptions(juce::jmax(9.0f, 11.0f * scale))));
-            g.drawFittedText(label, juce::Rectangle<int>(static_cast<int>(x - 58.0f * scale),
-                static_cast<int>(y - 13.0f * scale), static_cast<int>(116.0f * scale),
-                static_cast<int>(28.0f * scale)), juce::Justification::centred, 2);
+            const float labelScale = sector.family == 3 ? 0.82f : 1.0f;
+            g.setFont(juce::Font(juce::FontOptions(juce::jmax(9.0f, 11.0f * scale * labelScale))));
+            g.drawFittedText(label, juce::Rectangle<int>(static_cast<int>(x - 62.0f * scale),
+                static_cast<int>(y - 14.0f * scale), static_cast<int>(124.0f * scale),
+                static_cast<int>(28.0f * scale)), juce::Justification::centred, 1);
         }
     }
 
@@ -182,7 +171,7 @@ OrchestralStudioReverbAudioProcessorEditor::OrchestralStudioReverbAudioProcessor
     title.setColour(juce::Label::textColourId, text);
     addAndMakeVisible(title);
 
-    presetLabel.setText("Concert Hall   ▾", juce::dontSendNotification);
+    presetLabel.setText("CONCERT HALL", juce::dontSendNotification);
     presetLabel.setFont(juce::Font(juce::FontOptions(13.0f)));
     presetLabel.setColour(juce::Label::textColourId, text);
     presetLabel.setJustificationType(juce::Justification::centred);
@@ -246,7 +235,7 @@ void OrchestralStudioReverbAudioProcessorEditor::paint(juce::Graphics& g)
     g.fillAll(background);
     g.setColour(border);
     g.drawLine(28.0f, 70.0f, static_cast<float>(getWidth() - 28), 70.0f, 1.0f);
-    g.drawLine(28.0f, 604.0f, static_cast<float>(getWidth() - 28), 604.0f, 1.0f);
+    g.drawLine(28.0f, 520.0f, static_cast<float>(getWidth() - 28), 520.0f, 1.0f);
     g.setColour(muted);
     g.setFont(11.0f);
     g.drawText("SPACE", 30, 112, 100, 18, juce::Justification::centredLeft);
@@ -258,10 +247,10 @@ void OrchestralStudioReverbAudioProcessorEditor::resized()
 {
     title.setBounds(30, 20, 420, 34);
     presetLabel.setBounds(getWidth() / 2 - 115, 20, 230, 34);
-    stagePositionLabel.setBounds(30, 575, 180, 20);
-    stageMap.setBounds(220, 126, getWidth() - 440, 430);
+    stagePositionLabel.setBounds(30, 490, 180, 20);
+    stageMap.setBounds(80, 128, getWidth() - 160, 350);
 
-    const int y = 620;
+    const int y = 535;
     const int count = 7;
     const int width = (getWidth() - 60) / count;
     juce::Slider* sliders[] = { &roomSize, &preDelay, &decay, &damping, &early, &dry, &wet };
