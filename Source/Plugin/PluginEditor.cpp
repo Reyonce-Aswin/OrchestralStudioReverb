@@ -1,5 +1,6 @@
 #include "PluginEditor.h"
 #include <cmath>
+#include <utility>
 
 namespace
 {
@@ -161,7 +162,7 @@ OrchestralStudioReverbAudioProcessorEditor::OrchestralStudioReverbAudioProcessor
     {
         stageMap.setLayout(layout);
         selectorTitle.setText(stageMap.getTitle(), juce::dontSendNotification);
-        stagePositionLabel.setText({}, juce::dontSendNotification);
+        stagePositionLabel.setText(juce::String{}, juce::dontSendNotification);
         updateLayoutButtons();
     };
     standardLayoutButton.onClick = [changeLayout] { changeLayout(OrchestraLayoutComponent::Layout::Standard); };
