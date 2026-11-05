@@ -969,6 +969,12 @@ void OrchestralStudioReverbAudioProcessorEditor::resized()
     if (showingEQ)
     {
         eqBypassButton.setBounds(26, 72, 122, 25);
+        // Universal wet-path EQ blend, independent of the selected band.
+        const int mixGroupWidth = 330;
+        const int mixGroupX = getWidth() - 26 - mixGroupWidth;
+        eqMixLabel.setBounds(mixGroupX, 77, 52, 14);
+        eqMix.setBounds(mixGroupX + 54, 68, 214, 34);
+        eqMixValue.setBounds(mixGroupX + 270, 76, 60, 18);
         eqGraph.setBounds(26, 104, getWidth() - 52, 330);
         const int bandWidth = (getWidth() - 52) / 8;
         for (int i = 0; i < 8; ++i)
@@ -985,12 +991,9 @@ void OrchestralStudioReverbAudioProcessorEditor::resized()
         eqGain.setBounds(26 + columnWidth, 560, columnWidth - 12, 50);
         eqQLabel.setBounds(26 + columnWidth * 2, 545, columnWidth - 12, 14);
         eqQ.setBounds(26 + columnWidth * 2, 560, columnWidth - 12, 34);
-        eqMixLabel.setBounds(26 + columnWidth * 3, 545, columnWidth - 12, 14);
-        eqMix.setBounds(26 + columnWidth * 3, 560, columnWidth - 12, 34);
         eqFrequencyValue.setBounds(26, 596, columnWidth - 12, 18);
         eqGainValue.setBounds(26 + columnWidth, 596, columnWidth - 12, 18);
         eqQValue.setBounds(26 + columnWidth * 2, 596, columnWidth - 12, 18);
-        eqMixValue.setBounds(26 + columnWidth * 3, 596, columnWidth - 12, 18);
         return;
     }
 
