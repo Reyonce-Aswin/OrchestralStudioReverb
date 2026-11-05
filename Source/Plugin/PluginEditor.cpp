@@ -241,9 +241,12 @@ void OSREQGraph::paint(juce::Graphics& g)
     const bool eqBypassed = value("eqBypass") > 0.5f;
     const float displaySampleRate = static_cast<float>(std::max(1000.0, processor.getSampleRate()));
     juce::Path response;
-    for (int sample = 0; sample <= 240; ++sample)
+    // Dense logarithmic sampling is essential for narrow, resonant EQ peaks.
+    // A coarse graph grid aliases high-Q filters into artificial vertical spikes.
+    constexpr int responseSamples = 2048;
+    for (int sample = 0; sample <= responseSamples; ++sample)
     {
-        const float proportion = static_cast<float>(sample) / 240.0f;
+        const float proportion = static_cast<float>(sample) / static_cast<float>(responseSamples);
         const float frequency = 20.0f * std::pow(1000.0f, proportion);
         float responseDb = 0.0f;
         const auto magnitudeDb = [](float b0, float b1, float b2, float a1, float a2, float hz, float sr)
@@ -719,10 +722,10 @@ void OrchestralStudioReverbAudioProcessorEditor::rebuildEQAttachments()
         eqTypeBox.addItem("BELL", 1);
 
     eqSlopeBox.clear(juce::dontSendNotification);
-    eqSlopeBox.addItem("12 dB / OCT", 1);
-    eqSlopeBox.addItem("24 dB / OCT", 2);
-    eqSlopeBox.addItem("36 dB / OCT", 3);
-    eqSlopeBox.addItem("48 dB / OCT", 4);
+    eqSlopeBox.addItem("6 dB / OCT", 1);
+    eqSlopeBox.addItem("12 dB / OCT", 2);
+    eqSlopeBox.addItem("18 dB / OCT", 3);
+    eqSlopeBox.addItem("24 dB / OCT", 4);
     eqTypeAttachment = std::make_unique<ComboAttachment>(state, prefix + "Type", eqTypeBox);
     eqSlopeAttachment = std::make_unique<ComboAttachment>(state, prefix + "Slope", eqSlopeBox);
     updateEQBandTypeControls();
