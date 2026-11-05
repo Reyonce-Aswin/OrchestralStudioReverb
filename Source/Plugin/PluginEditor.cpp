@@ -27,6 +27,40 @@ juce::Font uiFont(float height, bool bold = false)
     return font;
 }
 
+int getLayoutChoiceIndex(OrchestraLayoutComponent::Layout layout)
+{
+    switch (layout)
+    {
+        case OrchestraLayoutComponent::Layout::Standard: return 0;
+        case OrchestraLayoutComponent::Layout::Classical: return 1;
+        case OrchestraLayoutComponent::Layout::ChamberModern: return 2;
+        case OrchestraLayoutComponent::Layout::ChamberClassical: return 3;
+    }
+    return 0;
+}
+
+int getStageChoiceIndex(const juce::StringArray& choices, juce::String section)
+{
+    section = section.trim();
+    if (section.equalsIgnoreCase("VIOLIN I")) section = "Violins I";
+    else if (section.equalsIgnoreCase("VIOLIN II")) section = "Violins II";
+    else if (section.equalsIgnoreCase("HARPSICHORD / FORTEPIANO")) section = "Piano";
+    else if (section.equalsIgnoreCase("PICCOLOS / FLUTES")) section = "Piccolos";
+    else if (section.equalsIgnoreCase("TIMPANI")) section = "Percussion";
+
+    for (int i = 0; i < choices.size(); ++i)
+        if (choices[i].equalsIgnoreCase(section))
+            return i;
+    return -1;
+}
+
+void setChoiceParameter(juce::AudioProcessorValueTreeState& state,
+                        const juce::String& parameterID, int choiceIndex)
+{
+    if (auto* parameter = state.getParameter(parameterID))
+        parameter->setValueNotifyingHost(parameter->convertTo0to1(static_cast<float>(choiceIndex)));
+}
+
 void drawLetterSpaced(juce::Graphics& g, const juce::String& value,
                       juce::Rectangle<float> area, float fontHeight, juce::Colour colour)
 {
@@ -178,6 +212,12 @@ OrchestralStudioReverbAudioProcessorEditor::OrchestralStudioReverbAudioProcessor
     auto changeLayout = [this](OrchestraLayoutComponent::Layout layout)
     {
         stageMap.setLayout(layout);
+        setChoiceParameter(processor.getParameters(), "stageLayout", getLayoutChoiceIndex(layout));
+        const auto& choices = dynamic_cast<juce::AudioParameterChoice*>(
+            processor.getParameters().getParameter("stagePosition"))->choices;
+        const int stageIndex = getStageChoiceIndex(choices, stageMap.getSelectedParameterName());
+        if (stageIndex >= 0)
+            setChoiceParameter(processor.getParameters(), "stagePosition", stageIndex);
         selectorTitle.setText(stageMap.getTitle(), juce::dontSendNotification);
         stagePositionLabel.setText(juce::String{}, juce::dontSendNotification);
         updateLayoutButtons();
@@ -243,23 +283,19 @@ OrchestralStudioReverbAudioProcessorEditor::OrchestralStudioReverbAudioProcessor
     stageMap.onSelectionChanged = [this](const juce::String& sectionName)
     {
         stagePositionLabel.setText("SELECTED: " + sectionName.toUpperCase(), juce::dontSendNotification);
-        if (stageMap.getLayout() == OrchestraLayoutComponent::Layout::ChamberModern
-            || stageMap.getLayout() == OrchestraLayoutComponent::Layout::ChamberClassical)
-            return;
-        if (auto* parameter = processor.getParameters().getParameter("stagePosition"))
+        if (auto* choice = dynamic_cast<juce::AudioParameterChoice*>(
+                processor.getParameters().getParameter("stagePosition")))
         {
-            if (auto* choice = dynamic_cast<juce::AudioParameterChoice*>(parameter))
-            {
-                const int index = choice->choices.indexOf(sectionName);
-                if (index >= 0)
-                    parameter->setValueNotifyingHost(parameter->convertTo0to1(static_cast<float>(index)));
-            }
+            const int index = getStageChoiceIndex(choice->choices, sectionName);
+            if (index >= 0)
+                setChoiceParameter(processor.getParameters(), "stagePosition", index);
         }
-        syncStageSelectionFromHost();
     };
     stageMap.onLayoutChanged = [this](OrchestraLayoutComponent::Layout) { updateLayoutButtons(); };
 
-    stageMap.setLayout(OrchestraLayoutComponent::Layout::Standard);
+    const int savedLayout = juce::jlimit(0, 3, juce::roundToInt(
+        processor.getParameters().getRawParameterValue("stageLayout")->load()));
+    stageMap.setLayout(static_cast<OrchestraLayoutComponent::Layout>(savedLayout));
     selectorTitle.setText(stageMap.getTitle(), juce::dontSendNotification);
     syncStageSelectionFromHost();
     updateLayoutButtons();
@@ -365,14 +401,28 @@ void OrchestralStudioReverbAudioProcessorEditor::resized()
 
 void OrchestralStudioReverbAudioProcessorEditor::syncStageSelectionFromHost()
 {
+    const int layoutIndex = juce::jlimit(0, 3, juce::roundToInt(
+        processor.getParameters().getRawParameterValue("stageLayout")->load()));
+    const auto layout = static_cast<OrchestraLayoutComponent::Layout>(layoutIndex);
+    if (stageMap.getLayout() != layout)
+    {
+        stageMap.setLayout(layout);
+        selectorTitle.setText(stageMap.getTitle(), juce::dontSendNotification);
+        updateLayoutButtons();
+    }
+
     if (auto* parameter = processor.getParameters().getParameter("stagePosition"))
     {
         const auto name = parameter->getCurrentValueAsText();
-        if (stageMap.getSelectedParameterName() != name)
+        const auto currentChoice = getStageChoiceIndex(
+            dynamic_cast<juce::AudioParameterChoice*>(parameter)->choices,
+            stageMap.getSelectedParameterName());
+        const auto hostChoice = getStageChoiceIndex(
+            dynamic_cast<juce::AudioParameterChoice*>(parameter)->choices, name);
+        if (hostChoice >= 0 && currentChoice != hostChoice)
             stageMap.setSelectedSection(name);
-        if (stageMap.getLayout() == OrchestraLayoutComponent::Layout::Standard
-        || stageMap.getLayout() == OrchestraLayoutComponent::Layout::Classical)
-        stagePositionLabel.setText("SELECTED: " + name.toUpperCase(), juce::dontSendNotification);
+        stagePositionLabel.setText("SELECTED: " + stageMap.getSelectedSection().toUpperCase(),
+                                   juce::dontSendNotification);
     }
 }
 
