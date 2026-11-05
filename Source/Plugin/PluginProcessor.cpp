@@ -85,6 +85,8 @@ void OrchestralStudioReverbAudioProcessor::processBlock(juce::AudioBuffer<float>
     orchestral::dsp::EarlyReflections::Parameters earlyParameters;
     earlyParameters.roomSize = parameters.getRawParameterValue("roomSize")->load();
     earlyParameters.preDelayMs = parameters.getRawParameterValue("preDelay")->load();
+    earlyParameters.stagePosition = juce::roundToInt(
+        parameters.getRawParameterValue("stagePosition")->load());
     earlyReflections.setParameters(earlyParameters);
 
     drySmoother.setTargetValue(parameters.getRawParameterValue("dry")->load());
