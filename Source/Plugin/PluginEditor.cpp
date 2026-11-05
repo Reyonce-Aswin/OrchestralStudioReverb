@@ -984,5 +984,8 @@ void OrchestralStudioReverbAudioProcessorEditor::timerCallback()
 {
     syncStageSelectionFromHost();
     updateEQBandTypeControls();
+    const auto prefix = "eqBand" + juce::String(selectedEQBand + 1);
+    const bool bandEnabled = processor.getParameters().getRawParameterValue(prefix + "Enabled")->load() > 0.5f;
+    eqEnableButton.setButtonText(bandEnabled ? "BAND ON" : "BAND OFF");
     eqGraph.repaint();
 }
