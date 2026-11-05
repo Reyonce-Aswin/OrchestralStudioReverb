@@ -16,6 +16,25 @@ public:
                         bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override;
 };
 
+class OSREQGraph final : public juce::Component
+{
+public:
+    explicit OSREQGraph(OrchestralStudioReverbAudioProcessor& p) : processor(p) {}
+    std::function<void(int)> onBandSelected;
+    void setSelectedBand(int band) { selectedBand = juce::jlimit(0, 7, band); repaint(); }
+    void paint(juce::Graphics&) override;
+    void mouseDown(const juce::MouseEvent&) override;
+    void mouseDrag(const juce::MouseEvent&) override;
+private:
+    juce::AudioProcessorValueTreeState& state() noexcept { return processor.getParameters(); }
+    float frequencyToX(float frequency) const;
+    float xToFrequency(float x) const;
+    float gainToY(float gain) const;
+    float yToGain(float y) const;
+    OrchestralStudioReverbAudioProcessor& processor;
+    int selectedBand = 0;
+};
+
 class OrchestralStudioReverbAudioProcessorEditor final : public juce::AudioProcessorEditor,
                                                           private juce::Timer
 {
@@ -30,10 +49,29 @@ private:
     void syncStageSelectionFromHost();
     void updateValueLabels();
     void updateLayoutButtons();
+    void setActiveView(bool showEQ);
+    void selectEQBand(int band);
+    void rebuildEQAttachments();
 
     OrchestralStudioReverbAudioProcessor& processor;
     OSRControlLookAndFeel controlLookAndFeel;
     OrchestraLayoutComponent stageMap;
+    OSREQGraph eqGraph;
+    juce::TextButton stageViewButton { "STAGE" };
+    juce::TextButton eqViewButton { "EQ" };
+    juce::TextButton eqBypassButton { "EQ BYPASS" };
+    juce::TextButton eqBandButtons[8];
+    juce::TextButton eqEnableButton { "BAND ON" };
+    juce::ComboBox eqTypeBox, eqSlopeBox;
+    juce::Slider eqFrequency, eqGain, eqQ;
+    juce::Label eqFrequencyLabel, eqGainLabel, eqQLabel, eqTypeLabel, eqSlopeLabel;
+    using ButtonAttachment = juce::AudioProcessorValueTreeState::ButtonAttachment;
+    using ComboAttachment = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
+    std::unique_ptr<ButtonAttachment> eqBypassAttachment, eqEnableAttachment;
+    std::unique_ptr<ComboAttachment> eqTypeAttachment, eqSlopeAttachment;
+    std::unique_ptr<Attachment> eqFrequencyAttachment, eqGainAttachment, eqQAttachment;
+    int selectedEQBand = 0;
+    bool showingEQ = false;
     juce::String lastDisplayedStageSelection;
     juce::Label selectorTitle;
     juce::TextButton standardLayoutButton { "FULL MODERN" };
