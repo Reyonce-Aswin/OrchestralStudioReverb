@@ -1,4 +1,7 @@
 #include "PluginEditor.h"
+#include <cmath>
+#include <vector>
+#include <functional>
 
 namespace
 {
@@ -13,19 +16,17 @@ juce::Colour familyColour(int family)
 {
     switch (family)
     {
-        case 1: return juce::Colour(66, 91, 112);  // woodwinds
-        case 2: return juce::Colour(67, 91, 82);   // strings
-        case 3: return juce::Colour(91, 75, 91);   // brass
-        case 4: return juce::Colour(102, 91, 68);  // percussion
-        default: return juce::Colour(75, 72, 91); // piano
+        case 1: return juce::Colour(66, 91, 112);
+        case 2: return juce::Colour(67, 91, 82);
+        case 3: return juce::Colour(91, 75, 91);
+        case 4: return juce::Colour(102, 91, 68);
+        default: return juce::Colour(75, 72, 91);
     }
 }
 }
 
 OrchestraStageMap::OrchestraStageMap()
 {
-    // Angles run from the player's left (180 degrees) to right (0 degrees).
-    // The same ordering is used by the stagePosition parameter in the processor.
     sectors = {
         { "Piano", 0.0f, 180.0f, 0.0f, 0.0f, 0 },
         { "Violin I", 145.0f, 180.0f, 0.0f, 0.0f, 2 },
@@ -53,37 +54,15 @@ juce::Path OrchestraStageMap::makeSector(const Sector& sector,
                                           juce::Point<float> centre,
                                           float baseline) const
 {
-    juce::Path path;
-    if (sector.name == "Piano")
-    {
-        const float inner = 18.0f;
-        const float outer = juce::jmin(getWidth() * 0.19f, getHeight() * 0.42f);
-        path.startNewSubPath(centre.x - outer, baseline);
-        path.lineTo(centre.x - inner, baseline);
-        path.lineTo(centre.x - inner, baseline - 1.0f);
-        for (int i = 0; i <= 48; ++i)
-        {
-            const float angle = juce::MathConstants<float>::pi
-                - (static_cast<float>(i) / 48.0f) * juce::MathConstants<float>::pi;
-            path.lineTo(centre.x + std::cos(angle) * inner,
-                        baseline - std::sin(angle) * inner);
-        }
-        path.lineTo(centre.x + outer, baseline);
-        path.closeSubPath();
-        return path;
-    }
-
     const float scale = juce::jmin(getWidth() / 900.0f, getHeight() / 360.0f);
-    float inner = 75.0f * scale;
-    float outer = 132.0f * scale;
-    if (sector.family == 1) { inner = 137.0f * scale; outer = 190.0f * scale; }
-    if (sector.family == 4) { inner = 195.0f * scale; outer = 246.0f * scale; }
-    if (sector.family == 3) { inner = 137.0f * scale; outer = 246.0f * scale; }
-    if (sector.family == 2) { inner = 75.0f * scale; outer = 132.0f * scale; }
+    float inner = 0.0f;
+    float outer = 70.0f * scale;
 
-    // Keep each family in its own band; split the side brass into four stacked slices.
-    float start = sector.startDegrees;
-    float end = sector.endDegrees;
+    if (sector.family == 2) { inner = 78.0f * scale; outer = 133.0f * scale; }
+    if (sector.family == 1) { inner = 139.0f * scale; outer = 192.0f * scale; }
+    if (sector.family == 4) { inner = 198.0f * scale; outer = 247.0f * scale; }
+    if (sector.family == 3) { inner = 139.0f * scale; outer = 247.0f * scale; }
+
     if (sector.family == 3 && sector.name != "Horns")
     {
         const int idx = sector.name == "Trumpets" ? 0 : sector.name == "Tenor Trombones" ? 1
@@ -93,18 +72,33 @@ juce::Path OrchestraStageMap::makeSector(const Sector& sector,
         outer = inner + band;
     }
     if (sector.family == 3 && sector.name == "Horns")
-        inner = 190.0f * scale;
+        inner = 198.0f * scale;
 
-    const float step = (end - start) / 28.0f;
-    for (int i = 0; i <= 28; ++i)
+    juce::Path path;
+    const float step = (sector.endDegrees - sector.startDegrees) / 32.0f;
+    for (int i = 0; i <= 32; ++i)
     {
-        const float a = juce::degreesToRadians(start + step * static_cast<float>(i));
-        path.lineTo(centre.x + std::cos(a) * outer, baseline - std::sin(a) * outer);
+        const float a = juce::degreesToRadians(
+            sector.startDegrees + step * static_cast<float>(i));
+        const juce::Point<float> point(centre.x + std::cos(a) * outer,
+                                        baseline - std::sin(a) * outer);
+        if (i == 0) path.startNewSubPath(point);
+        else path.lineTo(point);
     }
-    for (int i = 28; i >= 0; --i)
+
+    if (inner > 0.0f)
     {
-        const float a = juce::degreesToRadians(start + step * static_cast<float>(i));
-        path.lineTo(centre.x + std::cos(a) * inner, baseline - std::sin(a) * inner);
+        for (int i = 32; i >= 0; --i)
+        {
+            const float a = juce::degreesToRadians(
+                sector.startDegrees + step * static_cast<float>(i));
+            path.lineTo(centre.x + std::cos(a) * inner,
+                        baseline - std::sin(a) * inner);
+        }
+    }
+    else
+    {
+        path.lineTo(centre.x, baseline);
     }
     path.closeSubPath();
     return path;
@@ -112,35 +106,31 @@ juce::Path OrchestraStageMap::makeSector(const Sector& sector,
 
 void OrchestraStageMap::paint(juce::Graphics& g)
 {
-    const auto bounds = getLocalBounds().toFloat();
     g.fillAll(panel);
-    const auto centre = juce::Point<float>(bounds.getCentreX(), bounds.getBottom() - 12.0f);
-    const float baseline = bounds.getBottom() - 12.0f;
+    const auto centre = juce::Point<float>(getWidth() * 0.5f, getHeight() - 12.0f);
+    const float baseline = getHeight() - 12.0f;
     const float scale = juce::jmin(getWidth() / 900.0f, getHeight() / 360.0f);
 
     for (int i = 0; i < static_cast<int>(sectors.size()); ++i)
     {
         const auto& sector = sectors[static_cast<size_t>(i)];
-        auto path = makeSector(sector, centre, baseline);
-        auto fill = familyColour(sector.family).withAlpha(0.40f);
-        if (i == selectedSection)
-            fill = accent.withAlpha(0.78f);
-        g.setColour(fill);
+        const auto path = makeSector(sector, centre, baseline);
+        g.setColour(i == selectedSection ? accent.withAlpha(0.82f)
+                                          : familyColour(sector.family).withAlpha(0.42f));
         g.fillPath(path);
         g.setColour(i == selectedSection ? accent : border);
         g.strokePath(path, juce::PathStrokeType(i == selectedSection ? 2.0f : 1.0f));
 
         if (sector.name != "Piano")
         {
-            float mid = (sector.startDegrees + sector.endDegrees) * 0.5f;
-            float radius = sector.family == 2 ? 104.0f : sector.family == 1 ? 163.0f
-                         : sector.family == 4 ? 218.0f : 216.0f;
+            const float mid = (sector.startDegrees + sector.endDegrees) * 0.5f;
+            float radius = sector.family == 2 ? 105.0f : sector.family == 1 ? 165.0f
+                         : sector.family == 4 ? 222.0f : 222.0f;
             if (sector.family == 3 && sector.name != "Horns")
-                radius = 190.0f + (sector.name == "Trumpets" ? 0.0f :
-                         sector.name == "Tenor Trombones" ? 17.0f :
-                         sector.name == "Bass Trombones" ? 34.0f : 51.0f);
-            if (sector.family == 3 && sector.name == "Horns") radius = 216.0f;
-            const auto a = juce::degreesToRadians(mid);
+                radius = 204.0f + (sector.name == "Trumpets" ? 0.0f :
+                         sector.name == "Tenor Trombones" ? 13.0f :
+                         sector.name == "Bass Trombones" ? 26.0f : 39.0f);
+            const float a = juce::degreesToRadians(mid);
             const float x = centre.x + std::cos(a) * radius * scale;
             const float y = baseline - std::sin(a) * radius * scale;
             auto label = sector.name;
@@ -157,7 +147,7 @@ void OrchestraStageMap::paint(juce::Graphics& g)
 
     g.setColour(text);
     g.setFont(juce::Font(juce::FontOptions(11.0f)));
-    g.drawText("PIANO", getLocalBounds().withCentre({ getWidth() / 2, getHeight() - 45 }),
+    g.drawText("PIANO", juce::Rectangle<int>(getWidth() / 2 - 42, getHeight() - 55, 84, 18),
                juce::Justification::centred);
 }
 
@@ -165,7 +155,6 @@ void OrchestraStageMap::mouseDown(const juce::MouseEvent& event)
 {
     const auto centre = juce::Point<float>(getWidth() * 0.5f, getHeight() - 12.0f);
     const float baseline = getHeight() - 12.0f;
-    // Test in reverse draw order so the visually topmost segment wins.
     for (int i = static_cast<int>(sectors.size()) - 1; i >= 0; --i)
     {
         if (makeSector(sectors[static_cast<size_t>(i)], centre, baseline).contains(event.position))
