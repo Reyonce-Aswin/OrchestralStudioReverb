@@ -2,7 +2,7 @@ name: Windows build and DSP tests
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, 'fix/**']
   pull_request:
     branches: [main, master]
   workflow_dispatch:
@@ -40,4 +40,13 @@ jobs:
           name: OrchestralStudioReverb-Windows-VST3
           path: build/OrchestralStudioReverb_artefacts/Release/VST3/*.vst3
           if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload standalone orchestra layout preview
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: OrchestraLayoutPreview-Windows
+          path: build/OrchestraLayoutPreview_artefacts/Release/*.exe
+          if-no-files-found: error
           retention-days: 14
