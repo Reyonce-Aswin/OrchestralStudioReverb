@@ -145,38 +145,27 @@ private:
   constexpr float maxRadius=388.0f*1.6f;
   return juce::jmin(r.getWidth()/(2.0f*maxRadius),r.getHeight()/maxRadius);
  }
+ static float standardScale(juce::Rectangle<float> r)
+ { constexpr float maxRadius=388.0f*1.6f; return juce::jmin(r.getWidth()/(2.0f*maxRadius),r.getHeight()/maxRadius); }
+ static float juceAngle(float degrees) { return juce::degreesToRadians(90.0f-degrees); }
+ static float shiftedEdge(float degrees,float radius,bool isStart,bool gap)
+ {
+  if(!gap||radius<=0.0f)return degrees;
+  const float delta=std::asin(juce::jlimit(0.0f,0.999f,5.0f/radius))*180.0f/pi;
+  return degrees+(isStart?-delta:delta);
+ }
  static juce::Path standardSectorPath(const StandardSector& s,juce::Point<float> c,juce::Rectangle<float> r)
  {
-  const float scale=standardScale(r);
-  const float ri=s.inner*1.6f*scale, ro=s.outer*1.6f*scale;
-  auto edgeAngle=[&](float base,float radius,bool startEdge,bool gap)
-  {
-   if(!gap)return juce::degreesToRadians(base);
-   const float inset=5.0f*1.6f*scale;
-   const float delta=std::asin(juce::jlimit(0.0f,0.99f,inset/juce::jmax(1.0f,radius)));
-   return juce::degreesToRadians(base)+(startEdge?-delta:delta);
-  };
+  const float scale=standardScale(r),ri=s.inner*1.6f*scale,ro=s.outer*1.6f*scale;
+  const float so=juceAngle(shiftedEdge(s.from,ro,true,s.gapStart));
+  const float eo=juceAngle(shiftedEdge(s.to,ro,false,s.gapEnd));
+  const float si=juceAngle(shiftedEdge(s.from,ri,true,s.gapStart));
+  const float ei=juceAngle(shiftedEdge(s.to,ri,false,s.gapEnd));
   juce::Path p;
-  for(int i=0;i<=72;++i)
-  {
-   const float t=float(i)/72.0f;
-   const float a=juce::degreesToRadians(s.from+(s.to-s.from)*t);
-   const float adjusted=(i==0&&s.gapStart)?edgeAngle(s.from,ro,true,true):
-                        (i==72&&s.gapEnd)?edgeAngle(s.to,ro,false,true):a;
-   juce::Point<float> q(c.x+std::cos(adjusted)*ro,c.y-std::sin(adjusted)*ro);
-   if(i==0)p.startNewSubPath(q);else p.lineTo(q);
-  }
-  p.lineTo(c.x+std::cos(edgeAngle(s.to,ri,false,s.gapEnd))*ri,c.y-std::sin(edgeAngle(s.to,ri,false,s.gapEnd))*ri);
-  for(int i=1;i<=72;++i)
-  {
-   const float t=float(i)/72.0f;
-   const float base=s.to+(s.from-s.to)*t;
-   float a=juce::degreesToRadians(base);
-   if(i==72&&s.gapStart)a=edgeAngle(s.from,ri,true,true);
-   juce::Point<float> q(c.x+std::cos(a)*ri,c.y-std::sin(a)*ri);
-   p.lineTo(q);
-  }
-  p.closeSubPath();return p;
+  p.addCentredArc(c.x,c.y,ro,ro,0.0f,so,eo,true);
+  p.lineTo(c.x+std::cos(ei)*ri,c.y+std::sin(ei)*ri);
+  p.addCentredArc(c.x,c.y,ri,ri,0.0f,ei,si,false);
+  p.closeSubPath(); return p;
  }
  template<size_t N> void drawStandardSectors(juce::Graphics& g,const std::array<StandardSector,N>& sectors,juce::Point<float> c,juce::Rectangle<float> r)
  {
