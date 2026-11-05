@@ -8,17 +8,16 @@ namespace orchestral::dsp
 {
 /**
  * Stereo early-reflections generator using a compact tapped-delay network.
- *
- * The delay buffers are allocated in prepare(). processSample() performs no
- * allocation or locking and is safe to call from the audio thread.
+ * Stage position subtly changes reflection timing, stereo image and level.
  */
 class EarlyReflections
 {
 public:
     struct Parameters
     {
-        float roomSize = 1.0f;       // Delay-time scale: 0.5 (small) to 2.0 (large).
-        float preDelayMs = 12.0f;    // Silence before the first early reflection.
+        float roomSize = 1.0f;
+        float preDelayMs = 12.0f;
+        int stagePosition = 1; // Must match the Stage Position choice order.
     };
 
     void prepare(double sampleRate);
@@ -43,6 +42,12 @@ private:
     float targetRoomSize = 1.0f;
     float preDelayMs = 12.0f;
     float targetPreDelayMs = 12.0f;
+    float stagePan = -0.72f;
+    float targetStagePan = -0.72f;
+    float stageDepth = 0.72f;
+    float targetStageDepth = 0.72f;
+    float stageLevel = 1.0f;
+    float targetStageLevel = 1.0f;
     float smoothingCoefficient = 0.0f;
 };
 } // namespace orchestral::dsp
