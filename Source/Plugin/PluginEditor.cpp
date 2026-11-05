@@ -461,6 +461,89 @@ OrchestralStudioReverbAudioProcessorEditor::OrchestralStudioReverbAudioProcessor
     wet.onValueChange = refreshValues;
     updateValueLabels();
 
+
+    auto setupTabButton = [this](juce::TextButton& button)
+    {
+        button.setColour(juce::TextButton::buttonColourId, panel);
+        button.setColour(juce::TextButton::buttonOnColourId, juce::Colour(0x25, 0x34, 0x5E));
+        button.setColour(juce::TextButton::textColourOffId, text);
+        button.setColour(juce::TextButton::textColourOnId, text);
+        button.setLookAndFeel(&controlLookAndFeel);
+        button.setClickingTogglesState(false);
+        addAndMakeVisible(button);
+    };
+    setupTabButton(stageViewButton);
+    setupTabButton(eqViewButton);
+    setupTabButton(eqBypassButton);
+    stageViewButton.onClick = [this] { setActiveView(false); };
+    eqViewButton.onClick = [this] { setActiveView(true); };
+    eqBypassButton.setClickingTogglesState(true);
+    eqBypassAttachment = std::make_unique<ButtonAttachment>(state, "eqBypass", eqBypassButton);
+
+    addAndMakeVisible(eqGraph);
+    eqGraph.onBandSelected = [this](int band) { selectEQBand(band); };
+    for (int band = 0; band < 8; ++band)
+    {
+        auto& button = eqBandButtons[band];
+        button.setButtonText(juce::String(band + 1));
+        button.setColour(juce::TextButton::buttonColourId, panel);
+        button.setColour(juce::TextButton::buttonOnColourId, juce::Colour(0x25, 0x34, 0x5E));
+        button.setColour(juce::TextButton::textColourOffId, text);
+        button.setColour(juce::TextButton::textColourOnId, text);
+        button.setLookAndFeel(&controlLookAndFeel);
+        button.setClickingTogglesState(false);
+        button.onClick = [this, band] { selectEQBand(band); };
+        addAndMakeVisible(button);
+    }
+    eqEnableButton.setClickingTogglesState(true);
+    eqEnableButton.setColour(juce::TextButton::buttonColourId, panel);
+    eqEnableButton.setColour(juce::TextButton::buttonOnColourId, juce::Colour(0x25, 0x34, 0x5E));
+    eqEnableButton.setColour(juce::TextButton::textColourOffId, text);
+    eqEnableButton.setColour(juce::TextButton::textColourOnId, text);
+    eqEnableButton.setLookAndFeel(&controlLookAndFeel);
+    addAndMakeVisible(eqEnableButton);
+
+    const auto setupEQSlider = [this](juce::Slider& slider, juce::Label& label,
+                                      const juce::String& name, double minimum, double maximum,
+                                      double interval, double skew)
+    {
+        slider.setSliderStyle(juce::Slider::LinearHorizontal);
+        slider.setRange(minimum, maximum, interval);
+        if (skew > 0.0) slider.setSkewFactor(skew);
+        slider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 66, 20);
+        slider.setLookAndFeel(&controlLookAndFeel);
+        slider.setColour(juce::Slider::textBoxTextColourId, text);
+        slider.setColour(juce::Slider::textBoxBackgroundColourId, panel);
+        slider.setColour(juce::Slider::textBoxOutlineColourId, border);
+        label.setText(name, juce::dontSendNotification);
+        label.setFont(uiFont(9.5f, true));
+        label.setColour(juce::Label::textColourId, muted);
+        addAndMakeVisible(slider);
+        addAndMakeVisible(label);
+    };
+    setupEQSlider(eqFrequency, eqFrequencyLabel, "FREQUENCY", 20.0, 20000.0, 0.1, 0.25);
+    setupEQSlider(eqGain, eqGainLabel, "GAIN", -18.0, 18.0, 0.1, 0.0);
+    setupEQSlider(eqQ, eqQLabel, "RESONANCE / Q", 0.3, 8.0, 0.01, 0.5);
+
+    eqTypeBox.setColour(juce::ComboBox::backgroundColourId, panel);
+    eqTypeBox.setColour(juce::ComboBox::textColourId, text);
+    eqTypeBox.setColour(juce::ComboBox::outlineColourId, border);
+    eqSlopeBox.setColour(juce::ComboBox::backgroundColourId, panel);
+    eqSlopeBox.setColour(juce::ComboBox::textColourId, text);
+    eqSlopeBox.setColour(juce::ComboBox::outlineColourId, border);
+    eqTypeLabel.setText("FILTER", juce::dontSendNotification);
+    eqSlopeLabel.setText("SLOPE", juce::dontSendNotification);
+    for (auto* label : { &eqTypeLabel, &eqSlopeLabel })
+    {
+        label->setFont(uiFont(9.5f, true));
+        label->setColour(juce::Label::textColourId, muted);
+        addAndMakeVisible(*label);
+    }
+    addAndMakeVisible(eqTypeBox);
+    addAndMakeVisible(eqSlopeBox);
+    selectEQBand(0);
+    setActiveView(false);
+
     stageMap.onSelectionChanged = [this](const juce::String& sectionName)
     {
         stagePositionLabel.setText("SELECTED: " + sectionName.toUpperCase(), juce::dontSendNotification);
@@ -497,6 +580,117 @@ OrchestralStudioReverbAudioProcessorEditor::~OrchestralStudioReverbAudioProcesso
     classicalLayoutButton.setLookAndFeel(nullptr);
     chamberModernButton.setLookAndFeel(nullptr);
     chamberClassicalButton.setLookAndFeel(nullptr);
+
+    stageViewButton.setLookAndFeel(nullptr);
+    eqViewButton.setLookAndFeel(nullptr);
+    eqBypassButton.setLookAndFeel(nullptr);
+    eqEnableButton.setLookAndFeel(nullptr);
+    for (auto& button : eqBandButtons) button.setLookAndFeel(nullptr);
+    eqFrequency.setLookAndFeel(nullptr);
+    eqGain.setLookAndFeel(nullptr);
+    eqQ.setLookAndFeel(nullptr);
+}
+
+
+void OrchestralStudioReverbAudioProcessorEditor::selectEQBand(int band)
+{
+    selectedEQBand = juce::jlimit(0, 7, band);
+    eqGraph.setSelectedBand(selectedEQBand);
+    for (int i = 0; i < 8; ++i)
+        eqBandButtons[i].setColour(juce::TextButton::buttonColourId,
+            i == selectedEQBand ? juce::Colour(0x25, 0x34, 0x5E) : panel);
+    rebuildEQAttachments();
+}
+
+void OrchestralStudioReverbAudioProcessorEditor::rebuildEQAttachments()
+{
+    eqFrequencyAttachment.reset();
+    eqGainAttachment.reset();
+    eqQAttachment.reset();
+    eqEnableAttachment.reset();
+    eqTypeAttachment.reset();
+    eqSlopeAttachment.reset();
+
+    auto& state = processor.getParameters();
+    const auto prefix = "eqBand" + juce::String(selectedEQBand + 1);
+    eqFrequencyAttachment = std::make_unique<Attachment>(state, prefix + "Freq", eqFrequency);
+    eqGainAttachment = std::make_unique<Attachment>(state, prefix + "Gain", eqGain);
+    eqQAttachment = std::make_unique<Attachment>(state, prefix + "Q", eqQ);
+    eqEnableAttachment = std::make_unique<ButtonAttachment>(state, prefix + "Enabled", eqEnableButton);
+
+    eqTypeBox.clear(juce::dontSendNotification);
+    if (selectedEQBand == 0)
+    {
+        eqTypeBox.addItem("LOW CUT", 1);
+        eqTypeBox.addItem("LOW SHELF", 2);
+    }
+    else if (selectedEQBand == 7)
+    {
+        eqTypeBox.addItem("HIGH SHELF", 1);
+        eqTypeBox.addItem("HIGH CUT", 2);
+    }
+    else
+        eqTypeBox.addItem("BELL", 1);
+
+    eqSlopeBox.clear(juce::dontSendNotification);
+    eqSlopeBox.addItem("12 dB / OCT", 1);
+    eqSlopeBox.addItem("24 dB / OCT", 2);
+    eqSlopeBox.addItem("36 dB / OCT", 3);
+    eqSlopeBox.addItem("48 dB / OCT", 4);
+    eqTypeAttachment = std::make_unique<ComboAttachment>(state, prefix + "Type", eqTypeBox);
+    eqSlopeAttachment = std::make_unique<ComboAttachment>(state, prefix + "Slope", eqSlopeBox);
+
+    const int type = juce::roundToInt(state.getRawParameterValue(prefix + "Type")->load());
+    const bool cut = (selectedEQBand == 0 && type == 0) || (selectedEQBand == 7 && type == 1);
+    eqGain.setEnabled(!cut);
+    eqGainLabel.setText(cut ? "GAIN (N/A FOR CUT)" : "GAIN", juce::dontSendNotification);
+    eqQLabel.setText(cut ? "RESONANCE" : "Q", juce::dontSendNotification);
+    eqTypeBox.setVisible(selectedEQBand == 0 || selectedEQBand == 7);
+    eqTypeLabel.setVisible(selectedEQBand == 0 || selectedEQBand == 7);
+    eqSlopeBox.setVisible(cut);
+    eqSlopeLabel.setVisible(cut);
+    eqGraph.repaint();
+}
+
+void OrchestralStudioReverbAudioProcessorEditor::setActiveView(bool showEQ)
+{
+    showingEQ = showEQ;
+    const bool showStage = !showEQ;
+    selectorTitle.setVisible(showStage);
+    stagePositionLabel.setVisible(showStage);
+    stageMap.setVisible(showStage);
+    standardLayoutButton.setVisible(showStage);
+    classicalLayoutButton.setVisible(showStage);
+    chamberModernButton.setVisible(showStage);
+    chamberClassicalButton.setVisible(showStage);
+    for (auto* slider : { &roomSize, &preDelay, &decay, &damping, &early, &dry, &wet })
+        slider->setVisible(showStage);
+    for (auto* label : { &roomSizeLabel, &preDelayLabel, &decayLabel, &dampingLabel,
+                         &earlyLabel, &dryLabel, &wetLabel, &roomSizeValue, &preDelayValue,
+                         &decayValue, &dampingValue, &earlyValue, &dryValue, &wetValue })
+        label->setVisible(showStage);
+
+    eqGraph.setVisible(showEQ);
+    eqBypassButton.setVisible(showEQ);
+    eqEnableButton.setVisible(showEQ);
+    eqFrequency.setVisible(showEQ);
+    eqGain.setVisible(showEQ);
+    eqQ.setVisible(showEQ);
+    eqFrequencyLabel.setVisible(showEQ);
+    eqGainLabel.setVisible(showEQ);
+    eqQLabel.setVisible(showEQ);
+    eqTypeBox.setVisible(showEQ && (selectedEQBand == 0 || selectedEQBand == 7));
+    eqTypeLabel.setVisible(showEQ && (selectedEQBand == 0 || selectedEQBand == 7));
+    eqSlopeBox.setVisible(showEQ && eqSlopeBox.isVisible());
+    eqSlopeLabel.setVisible(showEQ && eqSlopeLabel.isVisible());
+    for (auto& button : eqBandButtons) button.setVisible(showEQ);
+
+    stageViewButton.setColour(juce::TextButton::buttonColourId, showStage
+        ? juce::Colour(0x25, 0x34, 0x5E) : panel);
+    eqViewButton.setColour(juce::TextButton::buttonColourId, showEQ
+        ? juce::Colour(0x25, 0x34, 0x5E) : panel);
+    resized();
+    repaint();
 }
 
 void OrchestralStudioReverbAudioProcessorEditor::updateLayoutButtons()
