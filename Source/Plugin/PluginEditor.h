@@ -55,6 +55,7 @@ private:
     void selectEQBand(int band);
     void rebuildEQAttachments();
     void updateEQBandTypeControls();
+    void updateEQValueLabels();
 
     OrchestralStudioReverbAudioProcessor& processor;
     OSRControlLookAndFeel controlLookAndFeel;
