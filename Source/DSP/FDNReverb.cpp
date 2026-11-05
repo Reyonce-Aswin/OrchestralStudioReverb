@@ -97,8 +97,16 @@ void FDNReverb::setParameters(const Parameters& newParameters) noexcept
     parameters.wetGain = std::clamp(newParameters.wetGain, 0.0f, 2.0f);
     parameters.stagePosition = std::clamp(newParameters.stagePosition, 0,
                                           static_cast<int>(kStageProfiles.size()) - 1);
-    stagePan = kStageProfiles[static_cast<std::size_t>(parameters.stagePosition)].pan;
-    stageDepth = kStageProfiles[static_cast<std::size_t>(parameters.stagePosition)].depth;
+    if (newParameters.useExplicitStagePosition)
+    {
+        stagePan = std::clamp(newParameters.stagePan, -1.0f, 1.0f);
+        stageDepth = std::clamp(newParameters.stageDepth, 0.0f, 1.0f);
+    }
+    else
+    {
+        stagePan = kStageProfiles[static_cast<std::size_t>(parameters.stagePosition)].pan;
+        stageDepth = kStageProfiles[static_cast<std::size_t>(parameters.stagePosition)].depth;
+    }
     updateCoefficients();
 }
 
