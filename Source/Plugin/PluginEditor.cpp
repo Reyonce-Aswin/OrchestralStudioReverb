@@ -306,7 +306,6 @@ void OrchestralStudioReverbAudioProcessorEditor::paint(juce::Graphics& g)
     g.drawLine(24.0f, 64.0f, static_cast<float>(getWidth() - 24), 64.0f, 1.0f);
     g.drawLine(24.0f, static_cast<float>(controlsTop - 10),
                static_cast<float>(getWidth() - 24), static_cast<float>(controlsTop - 10), 1.0f);
-    drawLetterSpaced(g, "ORCHESTRA LAYOUT", { 26.0f, 70.0f, 190.0f, 24.0f }, 10.0f, muted);
     drawLetterSpaced(g, "ROOM / REVERB / MIX", { 26.0f, static_cast<float>(controlsTop - 7),
                                                   220.0f, 15.0f }, 9.0f, muted);
 }
