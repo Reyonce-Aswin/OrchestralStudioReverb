@@ -62,7 +62,7 @@ void OrchestraLayoutComponent::rebuildSectors()
             { "Tuba", "Tuba", 326, 388, 12, 0, false, false, "TUBA" }
         };
     }
-    else
+    else if (currentLayout == Layout::Classical)
     {
         sectors = {
             { "Piano", "Piano", 62, 100, 180, 0, false, false, "PIANO" },
@@ -83,29 +83,6 @@ void OrchestraLayoutComponent::rebuildSectors()
             { "Tuba", "Tuba", 273, 325, 60, 44, false, false, "TUBA" },
             { "Percussion", "Percussion", 333, 385, 125, 68, false, false, "PERCUSSION" },
             { "Tuned Percussion", "Tuned Percussion", 333, 385, 68, 38, false, false, "TUNED PERCUSSION" }
-        };
-    }
-    else if (currentLayout == Layout::Classical)
-    {
-        sectors = {
-            { "PIANO", "PIANO", 62, 100, 180, 0, false, false, "PIANO" },
-            { "VIOLIN I", "VIOLIN I", 108, 205, 180, 140, false, false, "VIOLIN I" },
-            { "CELLI", "CELLI", 108, 205, 140, 90, false, false, "CELLI" },
-            { "VIOLAS", "VIOLAS", 108, 205, 90, 40, false, false, "VIOLAS" },
-            { "VIOLIN II", "VIOLIN II", 108, 205, 40, 0, false, false, "VIOLIN II" },
-            { "BASSES", "BASSES", 213, 265, 150, 118, false, false, "BASSES" },
-            { "PICCOLOS / FLUTES", "PICCOLOS", 213, 265, 118, 94, false, false, "PICCOLOS /\nFLUTES" },
-            { "OBOES", "OBOES", 213, 265, 94, 70, false, false, "OBOES" },
-            { "CLARINETS", "CLARINETS", 213, 265, 70, 46, false, false, "CLARINETS" },
-            { "BASSOONS", "BASSOONS", 213, 265, 46, 22, false, false, "BASSOONS" },
-            { "HARP / CELESTE", "HARP / CELESTE", 273, 325, 180, 152, false, false, "HARP /\nCELESTE" },
-            { "HORNS", "HORNS", 273, 325, 148, 120, false, false, "HORNS" },
-            { "TRUMPETS", "TRUMPETS", 273, 325, 120, 98, false, false, "TRUMPETS" },
-            { "TENOR TROMBONES", "TENOR TROMBONES", 273, 325, 98, 78, false, false, "TENOR\nTROMBONES" },
-            { "BASS TROMBONES", "BASS TROMBONES", 273, 325, 78, 60, false, false, "BASS\nTROMBONES" },
-            { "TUBA", "TUBA", 273, 325, 60, 44, false, false, "TUBA" },
-            { "PERCUSSION", "PERCUSSION", 333, 385, 125, 68, false, false, "PERCUSSION" },
-            { "TUNED PERCUSSION", "TUNED PERCUSSION", 333, 385, 68, 38, false, false, "TUNED PERCUSSION" }
         };
     }
     else if (currentLayout == Layout::ChamberModern)
