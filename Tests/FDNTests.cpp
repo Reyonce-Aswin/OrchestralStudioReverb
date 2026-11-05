@@ -5,6 +5,41 @@
 #include <cmath>
 #include <iostream>
 
+struct StereoEnergy
+{
+    double left = 0.0;
+    double right = 0.0;
+};
+
+static StereoEnergy renderAtStage(int stage)
+{
+    using orchestral::dsp::FDNReverb;
+    FDNReverb reverb;
+    reverb.prepare(48000.0, 512);
+
+    FDNReverb::Parameters p;
+    p.decaySeconds = 2.0f;
+    p.dampingHz = 10000.0f;
+    p.inputGain = 0.25f;
+    p.wetGain = 1.0f;
+    p.stagePosition = stage;
+    reverb.setParameters(p);
+
+    StereoEnergy energy;
+    constexpr int sampleCount = 48000 * 3;
+    for (int n = 0; n < sampleCount; ++n)
+    {
+        const float input = (n == 0) ? 1.0f : 0.0f;
+        float left = 0.0f;
+        float right = 0.0f;
+        reverb.processSample(input, input, left, right);
+        assert(std::isfinite(left) && std::isfinite(right));
+        energy.left += static_cast<double>(left) * left;
+        energy.right += static_cast<double>(right) * right;
+    }
+    return energy;
+}
+
 int main()
 {
     using orchestral::dsp::FDNReverb;
@@ -26,8 +61,6 @@ int main()
 
     for (int n = 0; n < sampleCount; ++n)
     {
-        // A single impulse followed by seven seconds of silence models a
-        // source note ending while the reverb network must keep ringing.
         const float in = (n == 0) ? 1.0f : 0.0f;
         float left = 0.0f, right = 0.0f;
         reverb.processSample(in, in, left, right);
@@ -37,8 +70,6 @@ int main()
         const double sampleEnergy = static_cast<double>(left) * left
                                   + static_cast<double>(right) * right;
         totalEnergy += sampleEnergy;
-
-        // Measure the final two seconds, well after the input has stopped.
         if (n >= sampleRate * 6)
             lateTailEnergy += sampleEnergy;
     }
@@ -46,8 +77,19 @@ int main()
     assert(peak > 0.0f);
     assert(totalEnergy > 0.0);
     assert(lateTailEnergy > 1.0e-12);
-    std::cout << "FDN impulse/tail test passed. Peak=" << peak
+
+    // Different stage positions must create measurably different late-field
+    // stereo perspectives, not just move the early-reflection taps.
+    const auto leftStage = renderAtStage(1);
+    const auto rightStage = renderAtStage(18);
+    const double stageDifference =
+        std::abs(leftStage.left - rightStage.left)
+        + std::abs(leftStage.right - rightStage.right);
+    assert(stageDifference > 1.0e-7);
+
+    std::cout << "FDN impulse/tail and stage-position tests passed. Peak=" << peak
               << ", total energy=" << totalEnergy
-              << ", late-tail energy=" << lateTailEnergy << '\n';
+              << ", late-tail energy=" << lateTailEnergy
+              << ", stage difference=" << stageDifference << '\\n';
     return 0;
 }
