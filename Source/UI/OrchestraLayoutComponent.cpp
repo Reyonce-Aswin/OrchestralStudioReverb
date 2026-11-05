@@ -69,21 +69,24 @@ juce::Path OrchestraLayoutComponent::buildSectorPath(const Sector& sector) const
     const float inner = sector.innerRadius * scale;
     const float outer = sector.outerRadius * scale;
 
-    // A gap is made by moving that angular edge 5 px into this sector.
-    // At the outer radius this is exactly 5 px; the radial displacement
-    // naturally tapers towards the inner radius.
-    const float gapAngle = outer > 0.0f
-        ? (kGapPixels / outer) * 180.0f / kPi : 0.0f;
-
-    const float startAngle = sector.fromDegrees - (sector.gapAtStart ? gapAngle : 0.0f);
-    const float endAngle = sector.toDegrees + (sector.gapAtEnd ? gapAngle : 0.0f);
+    // Offset only the specified radial edge by a constant 5 px into this
+    // sector. The intersection angle differs at the inner and outer radii,
+    // which keeps the visible gap width constant along the radial boundary.
+    const float startOuter = toRadians(sector.fromDegrees)
+        - (sector.gapAtStart ? std::asin(kGapPixels / outer) : 0.0f);
+    const float startInner = toRadians(sector.fromDegrees)
+        - (sector.gapAtStart ? std::asin(kGapPixels / inner) : 0.0f);
+    const float endOuter = toRadians(sector.toDegrees)
+        + (sector.gapAtEnd ? std::asin(kGapPixels / outer) : 0.0f);
+    const float endInner = toRadians(sector.toDegrees)
+        + (sector.gapAtEnd ? std::asin(kGapPixels / inner) : 0.0f);
 
     juce::Path path;
     constexpr int arcSegments = 48;
     for (int i = 0; i <= arcSegments; ++i)
     {
         const float proportion = static_cast<float>(i) / static_cast<float>(arcSegments);
-        const float angle = toRadians(startAngle + (endAngle - startAngle) * proportion);
+        const float angle = startOuter + (endOuter - startOuter) * proportion;
         const juce::Point<float> point(centre.x + std::cos(angle) * outer,
                                         centre.y - std::sin(angle) * outer);
         if (i == 0)
@@ -93,15 +96,14 @@ juce::Path OrchestraLayoutComponent::buildSectorPath(const Sector& sector) const
     }
 
     // Radial edge from outer to inner arc.
-    const float endRadians = toRadians(endAngle);
-    path.lineTo(centre.x + std::cos(endRadians) * inner,
-                centre.y - std::sin(endRadians) * inner);
+    path.lineTo(centre.x + std::cos(endInner) * inner,
+                centre.y - std::sin(endInner) * inner);
 
     // Inner arc returns from the sector end angle to its start angle.
     for (int i = arcSegments; i >= 0; --i)
     {
         const float proportion = static_cast<float>(i) / static_cast<float>(arcSegments);
-        const float angle = toRadians(startAngle + (endAngle - startAngle) * proportion);
+        const float angle = startInner + (endInner - startInner) * proportion;
         path.lineTo(centre.x + std::cos(angle) * inner,
                     centre.y - std::sin(angle) * inner);
     }
